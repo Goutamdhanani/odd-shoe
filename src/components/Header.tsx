@@ -367,8 +367,8 @@ export const Header: React.FC<HeaderProps> = ({
           }
 
           .header-inner {
-            flex-wrap: wrap;
-            row-gap: 6px;
+            flex-wrap: nowrap;
+            row-gap: 0;
           }
 
           .brand-lockup {
@@ -378,14 +378,23 @@ export const Header: React.FC<HeaderProps> = ({
           .brand-logo-chip {
             width: 32px;
             height: 32px;
+            flex-shrink: 0;
           }
 
           .brand-wordmark {
             font-size: 1.25rem;
+            white-space: nowrap;
+          }
+
+          @media (max-width: 400px) {
+            .brand-wordmark {
+              display: none;
+            }
           }
 
           .header-actions {
             gap: 8px;
+            flex-shrink: 0;
           }
 
           .action-btn {
@@ -419,42 +428,41 @@ export const Header: React.FC<HeaderProps> = ({
           top: 100%;
           left: 0;
           width: 100%;
-          background: rgba(11, 30, 45, 0.97);
+          background: rgba(11, 30, 45, 0.98);
           backdrop-filter: blur(24px);
           -webkit-backdrop-filter: blur(24px);
-          padding: 0 24px;
-          max-height: 0;
+          padding: 24px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+          transform: translateY(-100%);
           opacity: 0;
-          overflow: hidden;
-          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-          border-bottom: 0 solid rgba(255, 255, 255, 0.15);
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
           pointer-events: none;
-          z-index: 99;
+          z-index: -1;
         }
 
         .mobile-menu-overlay.open {
-          padding: 24px;
-          max-height: 320px;
+          transform: translateY(0);
           opacity: 1;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.15);
           pointer-events: auto;
         }
 
         .mobile-menu-content {
           display: flex;
           flex-direction: column;
-          gap: 18px;
+          gap: 12px;
         }
 
         .mobile-link {
           font-family: var(--font-display);
           font-weight: 700;
-          font-size: 1.2rem;
+          font-size: 1.25rem;
           color: var(--oddshoe-white);
           text-align: left;
+          padding: 10px 0;
           transition: color var(--transition-fast);
         }
 
+        .mobile-link:hover,
         .mobile-link:active {
           color: var(--oddshoe-amber);
         }
