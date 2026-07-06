@@ -1419,6 +1419,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           display: flex;
           align-items: center;
           gap: 8px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          max-width: 360px;
         }
 
         .title-edit-input {
@@ -1477,7 +1481,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         /* Workspace Grid */
         .customizer-workspace {
           display: grid;
-          grid-template-columns: 1.15fr 1fr;
+          grid-template-columns: 1.2fr 0.8fr;
           flex: 1;
           height: calc(100vh - 84px);
           overflow: hidden;
@@ -1490,6 +1494,14 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
             height: calc(100vh - 120px - env(safe-area-inset-top, 0px));
             overflow: hidden;
           }
+          .preview-stage-pane {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            padding: 16px;
+            border-right: none;
+          }
+          .desktop-only { display: none; }
+          .btn-label-desktop { display: none; }
         }
 
         /* Left 3D Stage Pane */
@@ -1767,6 +1779,37 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           justify-content: space-between;
           overflow: hidden;
           z-index: 20;
+          transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .configurator-controls-pane.is-dragging {
+          transition: none !important;
+        }
+
+        @media (max-width: 768px) {
+          .configurator-controls-pane {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -8px 40px rgba(11, 30, 45, 0.15);
+            max-height: 85vh;
+          }
+          .configurator-controls-pane.sheet-minimized {
+            transform: translateY(calc(100% - 120px));
+          }
+          .configurator-controls-pane.sheet-half {
+            transform: translateY(48%);
+          }
+          .configurator-controls-pane.sheet-expanded {
+            transform: translateY(15%);
+          }
+          .icon-header-btn {
+            padding: 10px;
+            min-width: 44px;
+            min-height: 44px;
+          }
         }
 
         .steps-progress-indicator {
@@ -1775,7 +1818,17 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           overflow-x: auto;
           scrollbar-width: none;
           padding: 8px 16px;
-          gap: 8px;
+          gap: 4px;
+          align-items: center;
+          scroll-snap-type: x mandatory;
+        }
+
+        .steps-progress-indicator::-webkit-scrollbar {
+          display: none;
+        }
+
+        .step-nav-btn {
+          scroll-snap-align: center;
         }
 
         .step-nav-btn {
@@ -1829,6 +1882,11 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           flex: 1;
           padding: 24px 32px;
           overflow-y: auto;
+          scrollbar-width: none;
+        }
+
+        .step-detail-card::-webkit-scrollbar {
+          display: none;
         }
 
         .control-section-title {
@@ -1896,6 +1954,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           color: rgba(11,30,45,0.8);
           line-height: 1.45;
           margin-top: 6px;
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
         }
 
         .base-price {
@@ -1909,7 +1971,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         /* Step 2: Color Zones & Palettes */
         .zones-grid {
           display: grid;
-          grid-template-columns: repeat(3, 1fr);
+          grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
           gap: 10px;
           margin-bottom: 24px;
         }
@@ -1927,6 +1989,14 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           font-weight: 800;
           color: var(--oddshoe-navy-900);
           min-height: 50px;
+          min-width: 0;
+        }
+
+        .zone-label {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-size: 0.78rem;
         }
 
         .zone-select-btn.active {
@@ -2159,6 +2229,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           font-size: 0.82rem;
           color: rgba(11,30,45,0.75);
           margin-top: 4px;
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
         }
 
         .radio-dot {
@@ -2217,6 +2291,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           font-size: 0.82rem;
           color: rgba(11,30,45,0.75);
           margin-top: 4px;
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
         }
 
         .mat-cost-badge {
@@ -2383,6 +2461,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           font-size: 0.82rem;
           color: rgba(11,30,45,0.75);
           margin-top: 2px;
+          overflow: hidden;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
         }
 
         .acc-cost {
@@ -2452,6 +2534,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           font-weight: 800;
           font-size: 1.6rem;
           color: var(--oddshoe-navy-900);
+          white-space: nowrap;
         }
 
         .size-selector-box {
@@ -2718,6 +2801,83 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           gap: 10px;
           box-shadow: var(--shadow-lg);
           z-index: 10001;
+        }
+
+        /* Bottom Sheet Drag Handle */
+        .bottom-sheet-handle-bar {
+          display: none;
+          justify-content: center;
+          padding: 12px 0 8px;
+          cursor: grab;
+        }
+        .drag-handle-indicator {
+          width: 40px;
+          height: 5px;
+          background: rgba(11, 30, 45, 0.2);
+          border-radius: 3px;
+        }
+        @media (max-width: 768px) {
+          .bottom-sheet-handle-bar { display: flex; }
+        }
+
+        /* Animations */
+        .animate-fade {
+          animation: fadeIn 0.3s ease-out;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-slide {
+          animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-scale {
+          animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes scaleIn {
+          from { transform: scale(0.95); }
+          to { transform: scale(1); }
+        }
+
+        .animate-spin {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
+        /* Mobile-specific optimizations */
+        @media (max-width: 768px) {
+          .camera-nav-bar {
+            padding: 8px 12px;
+            gap: 8px;
+            border-radius: 16px;
+            margin-top: 8px;
+          }
+          .camera-angle-tab {
+            padding: 6px 10px;
+            font-size: 0.72rem;
+            min-height: 34px;
+          }
+          .quick-presets-strip {
+            padding: 6px 12px;
+            gap: 10px;
+            margin-top: 8px;
+            border-radius: 14px;
+          }
+          .base-grid {
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 12px;
+          }
+          .base-item-card { padding: 14px; }
+          .base-img-box { height: 80px; margin-bottom: 10px; }
         }
       `}</style>
     </div>

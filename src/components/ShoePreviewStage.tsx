@@ -275,7 +275,56 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     return texturesRef.current;
   };
 
-  // 2. Geometry Generators
+  // 2. Geometry Generators — IMPROVED with higher poly counts and better anatomical shapes
+
+  // Helper: compute the width of the shoe at a given u parameter (0=heel, 1=toe)
+  const getShoeWidth = (u: number): number => {
+    if (u < 0.15) {
+      // Heel: medium width, slightly narrower
+      return 0.23 + 0.06 * (u / 0.15);
+    } else if (u < 0.30) {
+      // Arch: narrower transition
+      const t = (u - 0.15) / 0.15;
+      return 0.29 + 0.05 * Math.sin(t * Math.PI * 0.5);
+    } else if (u < 0.65) {
+      // Ball of foot: widest
+      const t = (u - 0.30) / 0.35;
+      return 0.34 + 0.02 * Math.sin(t * Math.PI);
+    } else {
+      // Toe box: smooth taper to rounded front
+      const t = (u - 0.65) / 0.35;
+      const ease = 1 - t * t * (3 - 2 * t); // smoothstep
+      return 0.36 * ease + 0.02;
+    }
+  };
+
+  // Helper: compute the height profile at u
+  const getShoeHeight = (u: number): number => {
+    if (u < 0.20) {
+      // Back (heel up to ankle)
+      const t = u / 0.20;
+      const hBack = isHighTop ? 0.68 : isLowTop ? 0.34 : 0.42;
+      const hCollar = isHighTop ? 0.82 : isLowTop ? 0.40 : 0.50;
+      // Smooth cubic interpolation for natural collar rise
+      const smoothT = t * t * (3 - 2 * t);
+      return hBack + (hCollar - hBack) * smoothT;
+    } else if (u < 0.30) {
+      // Collar peak region — smooth dip into the vamp
+      const t = (u - 0.20) / 0.10;
+      const hCollar = isHighTop ? 0.82 : isLowTop ? 0.40 : 0.50;
+      const hVamp = isHighTop ? 0.72 : isLowTop ? 0.36 : 0.44;
+      const smoothT = t * t * (3 - 2 * t);
+      return hCollar + (hVamp - hCollar) * smoothT;
+    } else {
+      // Vamp to toe — gradual decrease
+      const t = (u - 0.30) / 0.70;
+      const hVamp = isHighTop ? 0.72 : isLowTop ? 0.36 : 0.44;
+      // Use a smoother power curve for the vamp-to-toe transition
+      return hVamp * Math.pow(1 - t, 1.2) + 0.12;
+    }
+  };
+
+  // Improved sole curve with better toe spring
   const applySoleCurve = (geom: THREE.BufferGeometry) => {
     const pos = geom.attributes.position;
     for (let i = 0; i < pos.count; i++) {
@@ -284,9 +333,13 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       
       let lift = 0;
       if (z > 0) {
-        lift = 0.12 * Math.pow(z / 1.15, 2);
+        // Toe spring: more gradual upward curve
+        const t = z / 1.15;
+        lift = 0.10 * t * t + 0.06 * t * t * t;
       } else {
-        lift = 0.04 * Math.pow(z / 1.15, 2);
+        // Heel lift: subtle rocker
+        const t = z / 1.15;
+        lift = 0.05 * t * t;
       }
       pos.setY(i, y + lift);
     }
@@ -295,25 +348,30 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
 
   const createSoleGeometry = (height: number) => {
     const shape = new THREE.Shape();
-    shape.moveTo(0, 1.1);
-    shape.quadraticCurveTo(0.28, 0.95, 0.32, 0.45);
-    shape.quadraticCurveTo(0.34, -0.1, 0.19, -0.5);
-    shape.quadraticCurveTo(0.23, -0.9, 0.21, -1.05);
-    shape.quadraticCurveTo(0.12, -1.15, 0, -1.15);
+    // More anatomical sole footprint: wider forefoot, narrow arch, medium heel
+    shape.moveTo(0, 1.12);
+    // Toe: wider rounded front
+    shape.bezierCurveTo(0.16, 1.10, 0.28, 0.95, 0.32, 0.60);
+    // Ball of foot: widest point
+    shape.bezierCurveTo(0.36, 0.30, 0.35, 0.05, 0.30, -0.15);
+    // Arch: inward curve (narrower)
+    shape.bezierCurveTo(0.22, -0.45, 0.18, -0.65, 0.20, -0.85);
+    // Heel: medium width, rounded
+    shape.bezierCurveTo(0.22, -1.00, 0.18, -1.12, 0, -1.15);
     
-    // Mirror
-    shape.quadraticCurveTo(-0.12, -1.15, -0.21, -1.05);
-    shape.quadraticCurveTo(-0.23, -0.9, -0.19, -0.5);
-    shape.quadraticCurveTo(-0.34, -0.1, -0.32, 0.45);
-    shape.quadraticCurveTo(-0.28, 0.95, 0, 1.1);
+    // Mirror (left side)
+    shape.bezierCurveTo(-0.18, -1.12, -0.22, -1.00, -0.20, -0.85);
+    shape.bezierCurveTo(-0.18, -0.65, -0.22, -0.45, -0.30, -0.15);
+    shape.bezierCurveTo(-0.35, 0.05, -0.36, 0.30, -0.32, 0.60);
+    shape.bezierCurveTo(-0.28, 0.95, -0.16, 1.10, 0, 1.12);
 
     const geom = new THREE.ExtrudeGeometry(shape, {
       depth: height,
       bevelEnabled: true,
-      bevelThickness: 0.02,
-      bevelSize: 0.015,
-      bevelSegments: 4,
-      curveSegments: 36
+      bevelThickness: 0.04,
+      bevelSize: 0.03,
+      bevelSegments: 8,
+      curveSegments: 48
     });
 
     geom.rotateX(-Math.PI / 2);
@@ -323,8 +381,8 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
 
   const getUpperGeometry = () => {
     const geom = new THREE.BufferGeometry();
-    const slices = 32;
-    const radialSegments = 24;
+    const slices = 48;
+    const radialSegments = 36;
     const vertices: number[] = [];
     const indices: number[] = [];
     const uvs: number[] = [];
@@ -333,30 +391,12 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       const u = s / slices;
       const z = -1.1 + 2.2 * u;
 
-      let w = 0.22;
-      if (u < 0.25) {
-        w = 0.22 + 0.08 * (u / 0.25);
-      } else if (u < 0.65) {
-        const t = (u - 0.25) / 0.4;
-        w = 0.30 + 0.03 * Math.sin(t * Math.PI);
-      } else {
-        const t = (u - 0.65) / 0.35;
-        w = 0.33 * (1 - t * t) + 0.02;
-      }
+      const w = getShoeWidth(u);
+      const h = getShoeHeight(u);
 
-      let h = 0.12;
-      if (u < 0.25) {
-        const t = u / 0.25;
-        const hBack = isHighTop ? 0.70 : isLowTop ? 0.35 : 0.44;
-        const hCollar = isHighTop ? 0.85 : isLowTop ? 0.42 : 0.52;
-        h = hBack + (hCollar - hBack) * t;
-      } else {
-        const t = (u - 0.25) / 0.75;
-        const hCollar = isHighTop ? 0.85 : isLowTop ? 0.42 : 0.52;
-        h = hCollar * Math.pow(1 - t, 1.3) + 0.12;
-      }
-
-      const soleY = z > 0 ? 0.12 * Math.pow(z / 1.15, 2) : 0.04 * Math.pow(z / 1.15, 2);
+      const soleY = z > 0
+        ? 0.10 * Math.pow(z / 1.15, 2) + 0.06 * Math.pow(z / 1.15, 3)
+        : 0.05 * Math.pow(z / 1.15, 2);
       const yBase = soleY + 0.14;
 
       for (let r = 0; r < radialSegments; r++) {
@@ -373,13 +413,16 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
           y += sin * 0.02 * h;
         }
 
-        if (u > 0.2 && u < 0.65 && sin > 0) {
+        // Opening (collar) dip — deeper and smoother
+        if (u > 0.15 && u < 0.65 && sin > 0) {
           const angleDiff = Math.abs(theta - Math.PI / 2);
           const factor = Math.max(0, 1 - angleDiff / (Math.PI / 2.5));
           if (factor > 0) {
-            const pull = factor * factor * h * 0.82;
+            // Smoother falloff using smoothstep
+            const smooth = factor * factor * (3 - 2 * factor);
+            const pull = smooth * h * 0.80;
             y -= pull;
-            x *= (1 - factor * 0.4);
+            x *= (1 - smooth * 0.38);
           }
         }
 
@@ -413,8 +456,8 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
 
   const getOverlayGeometry = (uStart: number, uEnd: number, scale: number) => {
     const geom = new THREE.BufferGeometry();
-    const slices = 16;
-    const radialSegments = 24;
+    const slices = 20;
+    const radialSegments = 36;
     const vertices: number[] = [];
     const indices: number[] = [];
     const uvs: number[] = [];
@@ -424,30 +467,12 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       const u = uStart + (uEnd - uStart) * tSlice;
       const z = -1.1 + 2.2 * u;
 
-      let w = 0.22;
-      if (u < 0.25) {
-        w = 0.22 + 0.08 * (u / 0.25);
-      } else if (u < 0.65) {
-        const t = (u - 0.25) / 0.4;
-        w = 0.30 + 0.03 * Math.sin(t * Math.PI);
-      } else {
-        const t = (u - 0.65) / 0.35;
-        w = 0.33 * (1 - t * t) + 0.02;
-      }
+      const w = getShoeWidth(u);
+      const h = getShoeHeight(u);
 
-      let h = 0.12;
-      if (u < 0.25) {
-        const t = u / 0.25;
-        const hBack = isHighTop ? 0.70 : isLowTop ? 0.35 : 0.44;
-        const hCollar = isHighTop ? 0.85 : isLowTop ? 0.42 : 0.52;
-        h = hBack + (hCollar - hBack) * t;
-      } else {
-        const t = (u - 0.25) / 0.75;
-        const hCollar = isHighTop ? 0.85 : isLowTop ? 0.42 : 0.52;
-        h = hCollar * Math.pow(1 - t, 1.3) + 0.12;
-      }
-
-      const soleY = z > 0 ? 0.12 * Math.pow(z / 1.15, 2) : 0.04 * Math.pow(z / 1.15, 2);
+      const soleY = z > 0
+        ? 0.10 * Math.pow(z / 1.15, 2) + 0.06 * Math.pow(z / 1.15, 3)
+        : 0.05 * Math.pow(z / 1.15, 2);
       const yBase = soleY + 0.14;
 
       for (let r = 0; r < radialSegments; r++) {
@@ -464,13 +489,14 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
           y += sin * 0.02 * h * scale;
         }
 
-        if (u > 0.2 && u < 0.65 && sin > 0) {
+        if (u > 0.15 && u < 0.65 && sin > 0) {
           const angleDiff = Math.abs(theta - Math.PI / 2);
           const factor = Math.max(0, 1 - angleDiff / (Math.PI / 2.5));
           if (factor > 0) {
-            const pull = factor * factor * h * scale * 0.82;
+            const smooth = factor * factor * (3 - 2 * factor);
+            const pull = smooth * h * scale * 0.80;
             y -= pull;
-            x *= (1 - factor * 0.4);
+            x *= (1 - smooth * 0.38);
           }
         }
 
@@ -504,8 +530,8 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
 
   const getSidePanelGeometry = (isRight: boolean) => {
     const geom = new THREE.BufferGeometry();
-    const slices = 12;
-    const radialSegments = 6;
+    const slices = 16;
+    const radialSegments = 10;
     const vertices: number[] = [];
     const indices: number[] = [];
     const uvs: number[] = [];
@@ -515,30 +541,12 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       const u = 0.3 + 0.35 * tSlice;
       const z = -1.1 + 2.2 * u;
 
-      let w = 0.22;
-      if (u < 0.25) {
-        w = 0.22 + 0.08 * (u / 0.25);
-      } else if (u < 0.65) {
-        const t = (u - 0.25) / 0.4;
-        w = 0.30 + 0.03 * Math.sin(t * Math.PI);
-      } else {
-        const t = (u - 0.65) / 0.35;
-        w = 0.33 * (1 - t * t) + 0.02;
-      }
+      const w = getShoeWidth(u);
+      const h = getShoeHeight(u);
 
-      let h = 0.12;
-      if (u < 0.25) {
-        const t = u / 0.25;
-        const hBack = isHighTop ? 0.70 : isLowTop ? 0.35 : 0.44;
-        const hCollar = isHighTop ? 0.85 : isLowTop ? 0.42 : 0.52;
-        h = hBack + (hCollar - hBack) * t;
-      } else {
-        const t = (u - 0.25) / 0.75;
-        const hCollar = isHighTop ? 0.85 : isLowTop ? 0.42 : 0.52;
-        h = hCollar * Math.pow(1 - t, 1.3) + 0.12;
-      }
-
-      const soleY = z > 0 ? 0.12 * Math.pow(z / 1.15, 2) : 0.04 * Math.pow(z / 1.15, 2);
+      const soleY = z > 0
+        ? 0.10 * Math.pow(z / 1.15, 2) + 0.06 * Math.pow(z / 1.15, 3)
+        : 0.05 * Math.pow(z / 1.15, 2);
       const yBase = soleY + 0.14;
 
       for (let r = 0; r <= radialSegments; r++) {
@@ -553,7 +561,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
         const cos = Math.cos(theta);
         const sin = Math.sin(theta);
 
-        const scaleVal = 1.01;
+        const scaleVal = 1.012;
         let x = cos * w * scaleVal;
         let y = yBase;
 
@@ -566,12 +574,14 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
         const angleDiff = Math.abs(theta - Math.PI / 2);
         const factor = Math.max(0, 1 - angleDiff / (Math.PI / 2.5));
         if (factor > 0) {
-          const pull = factor * factor * h * scaleVal * 0.82;
+          const smooth = factor * factor * (3 - 2 * factor);
+          const pull = smooth * h * scaleVal * 0.80;
           y -= pull;
-          x *= (1 - factor * 0.4);
+          x *= (1 - smooth * 0.38);
         }
 
-        const edgeTaper = 1 - Math.pow(2 * tRad - 1, 2) * 0.1;
+        // Smoother edge blending with wider taper
+        const edgeTaper = 1 - Math.pow(2 * tRad - 1, 4) * 0.08;
         x *= edgeTaper;
 
         vertices.push(x, y, z);
@@ -601,8 +611,8 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
 
   const getTongueGeometry = () => {
     const geom = new THREE.BufferGeometry();
-    const slices = 16;
-    const radialSegments = 10;
+    const slices = 24;
+    const radialSegments = 14;
     const vertices: number[] = [];
     const indices: number[] = [];
     const uvs: number[] = [];
@@ -621,16 +631,18 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       }
 
       let h = 0.12;
-      const hCollar = isHighTop ? 0.85 : isLowTop ? 0.42 : 0.52;
-      const tonguePeak = hCollar + (isHighTop ? 0.08 : 0.04);
+      const hCollar = isHighTop ? 0.82 : isLowTop ? 0.40 : 0.50;
+      const tonguePeak = hCollar + (isHighTop ? 0.10 : 0.05);
       if (u < 0.25) {
         h = tonguePeak;
       } else {
         const t = (u - 0.25) / 0.75;
-        h = tonguePeak * Math.pow(1 - t, 1.3) + 0.12;
+        h = tonguePeak * Math.pow(1 - t, 1.2) + 0.12;
       }
 
-      const soleY = z > 0 ? 0.12 * Math.pow(z / 1.15, 2) : 0.04 * Math.pow(z / 1.15, 2);
+      const soleY = z > 0
+        ? 0.10 * Math.pow(z / 1.15, 2) + 0.06 * Math.pow(z / 1.15, 3)
+        : 0.05 * Math.pow(z / 1.15, 2);
       const yBase = soleY + 0.15;
 
       for (let r = 0; r <= radialSegments; r++) {
@@ -641,7 +653,10 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
         const sin = Math.sin(theta);
 
         const x = cos * w * 1.005;
-        const puff = 0.035 * Math.sin(tRad * Math.PI);
+        // Improved puff: thicker at center, tapered at edges
+        const centerPuff = Math.sin(tRad * Math.PI);
+        const lengthPuff = Math.sin(tSlice * Math.PI);
+        const puff = 0.05 * centerPuff * centerPuff * (0.5 + 0.5 * lengthPuff);
         const y = yBase + sin * h * 1.005 + puff;
 
         vertices.push(x, y, z);
@@ -680,9 +695,11 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       const z = -1.1 + 2.2 * u;
 
       let w = 0.30 - 0.05 * t;
-      const hCollar = isHighTop ? 0.85 : isLowTop ? 0.42 : 0.52;
-      const h = hCollar * Math.pow(1 - (u - 0.25) / 0.75, 1.3) + 0.12;
-      const soleY = z > 0 ? 0.12 * Math.pow(z / 1.15, 2) : 0.04 * Math.pow(z / 1.15, 2);
+      const hCollar = isHighTop ? 0.82 : isLowTop ? 0.40 : 0.50;
+      const h = hCollar * Math.pow(1 - (u - 0.25) / 0.75, 1.2) + 0.12;
+      const soleY = z > 0
+        ? 0.10 * Math.pow(z / 1.15, 2) + 0.06 * Math.pow(z / 1.15, 3)
+        : 0.05 * Math.pow(z / 1.15, 2);
       const yBase = soleY + 0.14;
 
       const leftTheta = 0.38 * Math.PI;
@@ -707,9 +724,20 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     for (let i = 0; i < eyeletsCount; i++) {
       if (i % 2 === 0) {
         points.push(leftEyelets[i]);
+        // Add midpoint control for smoother zig-zag
+        if (i < eyeletsCount - 1) {
+          const mid = new THREE.Vector3().lerpVectors(leftEyelets[i], rightEyelets[i], 0.5);
+          mid.y += 0.015;
+          points.push(mid);
+        }
         points.push(rightEyelets[i]);
       } else {
         points.push(rightEyelets[i]);
+        if (i < eyeletsCount - 1) {
+          const mid = new THREE.Vector3().lerpVectors(rightEyelets[i], leftEyelets[i], 0.5);
+          mid.y += 0.015;
+          points.push(mid);
+        }
         points.push(leftEyelets[i]);
       }
     }
@@ -722,22 +750,27 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     points.push(center);
     points.push(topL);
 
-    const bowL1 = new THREE.Vector3(topL.x - 0.06, topL.y + 0.05, topL.z - 0.05);
-    const bowL2 = new THREE.Vector3(topL.x - 0.12, topL.y + 0.02, topL.z - 0.08);
+    // Bow loops — more natural geometry
+    const bowL1 = new THREE.Vector3(topL.x - 0.05, topL.y + 0.06, topL.z - 0.04);
+    const bowL2 = new THREE.Vector3(topL.x - 0.10, topL.y + 0.04, topL.z - 0.07);
+    const bowL3 = new THREE.Vector3(topL.x - 0.13, topL.y + 0.01, topL.z - 0.09);
     points.push(bowL1);
     points.push(bowL2);
+    points.push(bowL3);
     points.push(center);
 
-    const bowR1 = new THREE.Vector3(topR.x + 0.06, topR.y + 0.05, topR.z - 0.05);
-    const bowR2 = new THREE.Vector3(topR.x + 0.12, topR.y + 0.02, topR.z - 0.08);
+    const bowR1 = new THREE.Vector3(topR.x + 0.05, topR.y + 0.06, topR.z - 0.04);
+    const bowR2 = new THREE.Vector3(topR.x + 0.10, topR.y + 0.04, topR.z - 0.07);
+    const bowR3 = new THREE.Vector3(topR.x + 0.13, topR.y + 0.01, topR.z - 0.09);
     points.push(bowR1);
     points.push(bowR2);
+    points.push(bowR3);
     points.push(center);
 
     const curve = new THREE.CatmullRomCurve3(points);
     const thickness = laces.thickness === 'thick' ? 0.013 : laces.thickness === 'thin' ? 0.007 : 0.010;
     
-    return new THREE.TubeGeometry(curve, 90, thickness, 8, false);
+    return new THREE.TubeGeometry(curve, 120, thickness, 12, false);
   };
 
   // 3. Optimized Texture Canvas Drawers (Memoized via cache keys)
@@ -853,6 +886,58 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     textures.insoleTexture.needsUpdate = true;
   };
 
+  // Helper to get material properties based on material type
+  const getUpperMaterialProps = (matType: string, textures: typeof texturesRef.current) => {
+    const baseProps: Record<string, any> = {};
+
+    if (matType === 'leather') {
+      baseProps.roughness = 0.3;
+      baseProps.metalness = 0.05;
+      baseProps.clearcoat = 0.4;
+      baseProps.clearcoatRoughness = 0.2;
+      baseProps.ior = 1.5;
+      baseProps.bumpMap = textures.leather || null;
+      baseProps.bumpScale = 0.004;
+      baseProps.map = null;
+    } else if (matType === 'suede') {
+      baseProps.roughness = 0.95;
+      baseProps.metalness = 0.0;
+      baseProps.sheen = 1.0;
+      baseProps.sheenRoughness = 0.8;
+      baseProps.sheenColor = new THREE.Color('#ffffff');
+      baseProps.clearcoat = 0;
+      baseProps.map = null;
+      baseProps.bumpMap = textures.leather || null;
+      baseProps.bumpScale = 0.006;
+    } else if (matType === 'mesh') {
+      baseProps.roughness = 0.7;
+      baseProps.metalness = 0.0;
+      baseProps.clearcoat = 0;
+      baseProps.map = textures.mesh || null;
+      baseProps.bumpMap = null;
+    } else if (matType === 'knit') {
+      baseProps.roughness = 0.8;
+      baseProps.metalness = 0.0;
+      baseProps.clearcoat = 0;
+      baseProps.map = textures.knit || null;
+      baseProps.bumpMap = null;
+    } else if (matType === 'canvas') {
+      baseProps.roughness = 0.75;
+      baseProps.metalness = 0.0;
+      baseProps.clearcoat = 0;
+      baseProps.map = textures.canvas || null;
+      baseProps.bumpMap = null;
+    } else {
+      baseProps.roughness = 0.6;
+      baseProps.metalness = 0.0;
+      baseProps.clearcoat = 0;
+      baseProps.map = null;
+      baseProps.bumpMap = null;
+    }
+
+    return baseProps;
+  };
+
   // Setup Three.js Scene, Camera, Lights and Objects
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
@@ -860,7 +945,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     const width = containerRef.current.clientWidth || 500;
     const height = containerRef.current.clientHeight || 350;
 
-    // A. RENDERER
+    // A. RENDERER — Improved with tone mapping and color space
     const renderer = new THREE.WebGLRenderer({
       canvas: canvasRef.current,
       antialias: true,
@@ -871,6 +956,9 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
     rendererRef.current = renderer;
 
     // B. SCENE
@@ -882,45 +970,66 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     camera.position.set(1.9, 0.6, 2.3); 
     cameraRef.current = camera;
 
-    // D. LIGHTS
-    const ambientLight = new THREE.AmbientLight('#ffffff', 0.7);
+    // D. LIGHTS — Dramatically improved lighting setup
+
+    // Reduced ambient — let directional lights do more work
+    const ambientLight = new THREE.AmbientLight('#ffffff', 0.5);
     scene.add(ambientLight);
 
-    const dirLight1 = new THREE.DirectionalLight('#ffffff', 1.4);
+    // Hemisphere light for natural sky/ground fill
+    const hemiLight = new THREE.HemisphereLight('#b4d7ff', '#ffecd2', 0.45);
+    hemiLight.position.set(0, 5, 0);
+    scene.add(hemiLight);
+
+    // Main key light — larger shadow map for quality
+    const dirLight1 = new THREE.DirectionalLight('#ffffff', 1.5);
     dirLight1.position.set(2, 4, 3);
     dirLight1.castShadow = true;
-    dirLight1.shadow.mapSize.width = 1024;
-    dirLight1.shadow.mapSize.height = 1024;
+    dirLight1.shadow.mapSize.width = 2048;
+    dirLight1.shadow.mapSize.height = 2048;
     dirLight1.shadow.camera.near = 0.5;
     dirLight1.shadow.camera.far = 15;
     dirLight1.shadow.camera.left = -1.5;
     dirLight1.shadow.camera.right = 1.5;
     dirLight1.shadow.camera.top = 1.5;
     dirLight1.shadow.camera.bottom = -1.5;
-    dirLight1.shadow.bias = -0.0005;
+    dirLight1.shadow.bias = -0.0003;
+    dirLight1.shadow.radius = 3;
     scene.add(dirLight1);
 
-    const dirLight2 = new THREE.DirectionalLight('#e0f2fe', 0.6); 
+    // Cool fill from opposite side
+    const dirLight2 = new THREE.DirectionalLight('#e0f2fe', 0.5); 
     dirLight2.position.set(-2, -1, -2);
     scene.add(dirLight2);
 
-    const pointLight = new THREE.PointLight('#ffffff', 0.4, 6);
+    // Back rim light for edge definition
+    const rimLight = new THREE.DirectionalLight('#c4e0ff', 0.7);
+    rimLight.position.set(-1, 3, -3);
+    scene.add(rimLight);
+
+    // Warm fill from front-bottom
+    const warmFill = new THREE.PointLight('#fff5e6', 0.3, 8);
+    warmFill.position.set(0.5, -0.5, 2);
+    scene.add(warmFill);
+
+    const pointLight = new THREE.PointLight('#ffffff', 0.3, 6);
     pointLight.position.set(0, 2, -1);
     scene.add(pointLight);
 
-    // E. GROUND BLUR SHADOW
-    const shadowGeo = new THREE.PlaneGeometry(3, 3);
+    // E. GROUND BLUR SHADOW — Softer and larger
+    const shadowGeo = new THREE.PlaneGeometry(3.5, 3.5);
     const shadowCanvas = document.createElement('canvas');
-    shadowCanvas.width = 256;
-    shadowCanvas.height = 256;
+    shadowCanvas.width = 512;
+    shadowCanvas.height = 512;
     const shadowCtx = shadowCanvas.getContext('2d')!;
-    const grad = shadowCtx.createRadialGradient(128, 128, 0, 128, 128, 110);
-    grad.addColorStop(0, 'rgba(15, 23, 42, 0.45)');
-    grad.addColorStop(0.3, 'rgba(15, 23, 42, 0.35)');
-    grad.addColorStop(0.7, 'rgba(15, 23, 42, 0.1)');
+    const grad = shadowCtx.createRadialGradient(256, 256, 0, 256, 256, 220);
+    grad.addColorStop(0, 'rgba(15, 23, 42, 0.38)');
+    grad.addColorStop(0.2, 'rgba(15, 23, 42, 0.30)');
+    grad.addColorStop(0.5, 'rgba(15, 23, 42, 0.15)');
+    grad.addColorStop(0.8, 'rgba(15, 23, 42, 0.04)');
     grad.addColorStop(1, 'rgba(15, 23, 42, 0)');
     shadowCtx.fillStyle = grad;
-    shadowCtx.fillRect(0, 0, 256, 256);
+    shadowCtx.fillRect(0, 0, 512, 512);
 
     const shadowTexture = new THREE.CanvasTexture(shadowCanvas);
     const shadowMat = new THREE.MeshBasicMaterial({
@@ -930,8 +1039,24 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     });
     const shadowMesh = new THREE.Mesh(shadowGeo, shadowMat);
     shadowMesh.rotation.x = -Math.PI / 2;
-    shadowMesh.position.y = -0.035; 
+    shadowMesh.position.y = -0.04; 
     scene.add(shadowMesh);
+
+    // Subtle reflection plane under the shoe
+    const reflectionGeo = new THREE.PlaneGeometry(2.5, 2.5);
+    const reflectionMat = new THREE.MeshStandardMaterial({
+      color: '#ffffff',
+      roughness: 0.85,
+      metalness: 0.15,
+      transparent: true,
+      opacity: 0.06,
+      depthWrite: false
+    });
+    const reflectionPlane = new THREE.Mesh(reflectionGeo, reflectionMat);
+    reflectionPlane.rotation.x = -Math.PI / 2;
+    reflectionPlane.position.y = -0.038;
+    reflectionPlane.receiveShadow = true;
+    scene.add(reflectionPlane);
 
     // F. SHOE GROUP
     const shoeGroup = new THREE.Group();
@@ -942,11 +1067,11 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
 
     const textures = getProceduralTextures();
 
-    // Sole
+    // Sole — improved geometry
     const midsoleGeom = createSoleGeometry(0.14);
     const midsoleMat = new THREE.MeshStandardMaterial({
       color: colors.midsole || '#FFFFFF',
-      roughness: 0.55,
+      roughness: 0.50,
       metalness: 0.05
     });
     const midsole = new THREE.Mesh(midsoleGeom, midsoleMat);
@@ -971,7 +1096,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     meshesRef.current.outsole = outsole;
 
     // Air Bubbles
-    const airGlassGeom = new THREE.CylinderGeometry(0.06, 0.06, 0.16, 16);
+    const airGlassGeom = new THREE.CylinderGeometry(0.06, 0.06, 0.16, 20);
     airGlassGeom.rotateZ(Math.PI / 2); 
     const airGlassMat = new THREE.MeshPhysicalMaterial({
       roughness: 0.1,
@@ -981,7 +1106,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       opacity: 0.8
     });
 
-    const airCoreGeom = new THREE.CylinderGeometry(0.038, 0.038, 0.14, 16);
+    const airCoreGeom = new THREE.CylinderGeometry(0.038, 0.038, 0.14, 20);
     airCoreGeom.rotateZ(Math.PI / 2);
     const airCoreMat = new THREE.MeshStandardMaterial({
       color: colors.airBubble || '#00E5FF',
@@ -1014,15 +1139,22 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     bubbleGroupL.visible = hasBubble;
     bubbleGroupR.visible = hasBubble;
 
-    // Upper Mesh
+    // Upper Mesh — MeshPhysicalMaterial for PBR accuracy
     const upperGeom = getUpperGeometry();
-    const upperMat = new THREE.MeshStandardMaterial({
+    const matProps = getUpperMaterialProps(material, textures);
+    const upperMat = new THREE.MeshPhysicalMaterial({
       color: colors.upper || '#FFFFFF',
-      roughness: material === 'leather' ? 0.35 : material === 'suede' ? 0.9 : 0.6,
-      metalness: material === 'leather' ? 0.1 : 0.0,
-      map: material === 'mesh' ? textures.mesh : material === 'knit' ? textures.knit : material === 'canvas' ? textures.canvas : null,
-      bumpMap: material === 'leather' ? textures.leather : null,
-      bumpScale: 0.004
+      roughness: matProps.roughness,
+      metalness: matProps.metalness,
+      clearcoat: matProps.clearcoat || 0,
+      clearcoatRoughness: matProps.clearcoatRoughness || 0,
+      sheen: matProps.sheen || 0,
+      sheenRoughness: matProps.sheenRoughness || 0,
+      sheenColor: matProps.sheenColor || new THREE.Color('#ffffff'),
+      ior: matProps.ior || 1.5,
+      map: matProps.map || null,
+      bumpMap: matProps.bumpMap || null,
+      bumpScale: matProps.bumpScale || 0.004
     });
     const upper = new THREE.Mesh(upperGeom, upperMat);
     upper.castShadow = true;
@@ -1030,12 +1162,14 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     shoeGroup.add(upper);
     meshesRef.current.upper = upper;
 
-    // Toe Cap
-    const toeCapGeom = getOverlayGeometry(0.72, 1.0, 1.008);
-    const toeCapMat = new THREE.MeshStandardMaterial({
+    // Toe Cap — covers more of the front (uStart 0.68 instead of 0.72)
+    const toeCapGeom = getOverlayGeometry(0.68, 1.0, 1.008);
+    const toeCapMat = new THREE.MeshPhysicalMaterial({
       color: colors.toeBox || '#FFFFFF',
-      roughness: material === 'leather' ? 0.35 : material === 'suede' ? 0.9 : 0.6,
-      metalness: 0.0
+      roughness: matProps.roughness,
+      metalness: matProps.metalness,
+      clearcoat: matProps.clearcoat || 0,
+      clearcoatRoughness: matProps.clearcoatRoughness || 0
     });
     const toeCap = new THREE.Mesh(toeCapGeom, toeCapMat);
     toeCap.castShadow = true;
@@ -1044,9 +1178,9 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
 
     // Heel Counter
     const heelCounterGeom = getOverlayGeometry(0.0, 0.22, 1.01);
-    const heelCounterMat = new THREE.MeshStandardMaterial({
+    const heelCounterMat = new THREE.MeshPhysicalMaterial({
       color: colors.heel || '#FFFFFF',
-      roughness: 0.7,
+      roughness: 0.65,
       metalness: 0.0
     });
     const heelCounter = new THREE.Mesh(heelCounterGeom, heelCounterMat);
@@ -1054,10 +1188,10 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     shoeGroup.add(heelCounter);
     meshesRef.current.heelCounter = heelCounter;
 
-    // Side Panels Overlay
+    // Side Panels Overlay — improved geometry
     const sidePanelGeomL = getSidePanelGeometry(false);
     const sidePanelGeomR = getSidePanelGeometry(true);
-    const sidePanelMat = new THREE.MeshStandardMaterial({
+    const sidePanelMat = new THREE.MeshPhysicalMaterial({
       color: colors.sidePanels || '#FFFFFF',
       roughness: 0.6,
       metalness: 0.05
@@ -1071,12 +1205,12 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     meshesRef.current.sidePanelL = sidePanelL;
     meshesRef.current.sidePanelR = sidePanelR;
 
-    // Tongue
+    // Tongue — improved geometry with more puff
     const tongueGeom = getTongueGeometry();
-    const tongueMat = new THREE.MeshStandardMaterial({
+    const tongueMat = new THREE.MeshPhysicalMaterial({
       color: colors.tongue || '#FFFFFF',
       roughness: 0.75,
-      map: material === 'mesh' ? textures.mesh : material === 'knit' ? textures.knit : material === 'canvas' ? textures.canvas : null
+      map: matProps.map || null
     });
     const tongue = new THREE.Mesh(tongueGeom, tongueMat);
     tongue.castShadow = true;
@@ -1094,9 +1228,11 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     const tongueLabel = new THREE.Mesh(tongueLabelGeom, tongueLabelMat);
     
     const zTongue = -0.15;
-    const soleYTongue = zTongue > 0 ? 0.12 * Math.pow(zTongue / 1.15, 2) : 0.04 * Math.pow(zTongue / 1.15, 2);
+    const soleYTongue = zTongue > 0
+      ? 0.10 * Math.pow(zTongue / 1.15, 2) + 0.06 * Math.pow(zTongue / 1.15, 3)
+      : 0.05 * Math.pow(zTongue / 1.15, 2);
     const yBaseTongue = soleYTongue + 0.14;
-    const hCollar = isHighTop ? 0.85 : isLowTop ? 0.42 : 0.52;
+    const hCollar = isHighTop ? 0.82 : isLowTop ? 0.40 : 0.50;
 
     tongueLabel.position.set(0, yBaseTongue + hCollar + (isHighTop ? 0.07 : 0.04), -0.15);
     tongueLabel.rotation.set(-Math.PI / 4.5, 0, 0);
@@ -1117,7 +1253,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     shoeGroup.add(insole);
     meshesRef.current.insole = insole;
 
-    // Laces Tube
+    // Laces Tube — higher detail
     const lacesGeom = getLacesGeometry();
     const lacesMat = new THREE.MeshStandardMaterial({
       color: laces.color || '#FFFFFF',
@@ -1147,14 +1283,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       const ly3d = 0.44 - ((ly - 60) / 160) * 0.25;
 
       const uNorm = (lz3d + 1.1) / 2.2;
-      let wUpper = 0.22;
-      if (uNorm < 0.25) {
-        wUpper = 0.22 + 0.08 * (uNorm / 0.25);
-      } else if (uNorm < 0.65) {
-        wUpper = 0.30 + 0.03 * Math.sin(((uNorm - 0.25) / 0.4) * Math.PI);
-      } else {
-        wUpper = 0.33 * (1 - Math.pow((uNorm - 0.65) / 0.35, 2)) + 0.02;
-      }
+      const wUpper = getShoeWidth(uNorm);
 
       logoBadge.position.set(wUpper * 1.018, ly3d, lz3d);
       logoBadge.scale.setScalar(logo.scale);
@@ -1173,7 +1302,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       new THREE.Vector3(0, 0.4, -0.95),
     ];
     const pullTabCurve = new THREE.CatmullRomCurve3(pullTabPoints);
-    const pullTabGeom = new THREE.TubeGeometry(pullTabCurve, 16, 0.012, 6, true);
+    const pullTabGeom = new THREE.TubeGeometry(pullTabCurve, 20, 0.012, 8, true);
     const pullTabMat = new THREE.MeshStandardMaterial({
       color: colors.heelPull || '#FFFFFF',
       roughness: 0.7
@@ -1182,9 +1311,11 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     pullTab.castShadow = true;
     
     const zHeel = -1.0;
-    const soleYHeel = zHeel > 0 ? 0.12 * Math.pow(zHeel / 1.15, 2) : 0.04 * Math.pow(zHeel / 1.15, 2);
+    const soleYHeel = zHeel > 0
+      ? 0.10 * Math.pow(zHeel / 1.15, 2) + 0.06 * Math.pow(zHeel / 1.15, 3)
+      : 0.05 * Math.pow(zHeel / 1.15, 2);
     const yBaseHeel = soleYHeel + 0.14;
-    const hCollarBack = isHighTop ? 0.70 : isLowTop ? 0.35 : 0.44;
+    const hCollarBack = isHighTop ? 0.68 : isLowTop ? 0.34 : 0.42;
 
     pullTab.position.set(0, yBaseHeel + hCollarBack - 0.35, 0.0);
     shoeGroup.add(pullTab);
@@ -1192,7 +1323,9 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     // Carbon Fiber Heel Plate
     const carbonHeelGeom = getOverlayGeometry(0.0, 0.15, 1.015);
     const zCarbon = -1.1;
-    const soleYCarbon = zCarbon > 0 ? 0.12 * Math.pow(zCarbon / 1.15, 2) : 0.04 * Math.pow(zCarbon / 1.15, 2);
+    const soleYCarbon = zCarbon > 0
+      ? 0.10 * Math.pow(zCarbon / 1.15, 2) + 0.06 * Math.pow(zCarbon / 1.15, 3)
+      : 0.05 * Math.pow(zCarbon / 1.15, 2);
     const yBaseCarbon = soleYCarbon + 0.14;
 
     const cPos = carbonHeelGeom.attributes.position;
@@ -1225,7 +1358,9 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     const reflectiveStrip = new THREE.Mesh(refStripGeom, refStripMat);
     
     const zReflective = -1.06;
-    const soleYReflective = zReflective > 0 ? 0.12 * Math.pow(zReflective / 1.15, 2) : 0.04 * Math.pow(zReflective / 1.15, 2);
+    const soleYReflective = zReflective > 0
+      ? 0.10 * Math.pow(zReflective / 1.15, 2) + 0.06 * Math.pow(zReflective / 1.15, 3)
+      : 0.05 * Math.pow(zReflective / 1.15, 2);
     const yBaseReflective = soleYReflective + 0.14;
 
     reflectiveStrip.position.set(0, yBaseReflective + 0.16, -1.06);
@@ -1234,11 +1369,11 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     meshesRef.current.reflectiveStrip = reflectiveStrip;
     reflectiveStrip.visible = accessories.reflectiveStrips;
 
-    // Eyelets Detail
-    const { leftEyelets, rightEyelets, eyeletsCount } = getEyeletPoints();
+    // Eyelets Detail — using instanced geometry for performance
+    const { leftEyelets: leftEyeletPts, rightEyelets: rightEyeletPts, eyeletsCount } = getEyeletPoints();
 
     const eyelets = new THREE.Group();
-    const eyeletGeo = new THREE.TorusGeometry(0.014, 0.005, 6, 12);
+    const eyeletGeo = new THREE.TorusGeometry(0.014, 0.005, 8, 16);
     eyeletGeo.rotateY(Math.PI / 2);
     const eyeletMat = new THREE.MeshStandardMaterial({
       color: accessories.goldEyelets ? '#FFD700' : colors.laceLoops || '#FFFFFF',
@@ -1252,9 +1387,11 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       const z = -1.1 + 2.2 * u;
 
       let w = 0.30 - 0.05 * t;
-      const hCollarEl = isHighTop ? 0.85 : isLowTop ? 0.42 : 0.52;
-      const h = hCollarEl * Math.pow(1 - (u - 0.25) / 0.75, 1.3) + 0.12;
-      const soleY = z > 0 ? 0.12 * Math.pow(z / 1.15, 2) : 0.04 * Math.pow(z / 1.15, 2);
+      const hCollarEl = isHighTop ? 0.82 : isLowTop ? 0.40 : 0.50;
+      const h = hCollarEl * Math.pow(1 - (u - 0.25) / 0.75, 1.2) + 0.12;
+      const soleY = z > 0
+        ? 0.10 * Math.pow(z / 1.15, 2) + 0.06 * Math.pow(z / 1.15, 3)
+        : 0.05 * Math.pow(z / 1.15, 2);
       const yBaseEl = soleY + 0.14;
 
       const leftTheta = 0.38 * Math.PI;
@@ -1287,21 +1424,21 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       roughness: 0.1
     });
     const laceTag = new THREE.Mesh(laceTagGeom, laceTagMat);
-    const l1 = leftEyelets[0];
-    const r1 = rightEyelets[0];
+    const l1 = leftEyeletPts[0];
+    const r1 = rightEyeletPts[0];
     laceTag.position.set(0, (l1.y + r1.y) / 2 + 0.005, (l1.z + r1.z) / 2 + 0.01);
     laceTag.rotation.set(-Math.PI / 4, 0, 0);
     shoeGroup.add(laceTag);
     meshesRef.current.laceTag = laceTag;
     laceTag.visible = accessories.laceTags;
 
-    // 5. ANIMATION & RENDER LOOP
+    // 5. ANIMATION & RENDER LOOP — Improved with smoother damping and figure-8 float
     let animationFrameId: number;
     
     const render = () => {
-      // Smooth Damping Lerp
-      rotationXRef.current += (targetRotationX.current - rotationXRef.current) * 0.12;
-      rotationYRef.current += (targetRotationY.current - rotationYRef.current) * 0.12;
+      // Smoother damping — more cinematic lerp factor
+      rotationXRef.current += (targetRotationX.current - rotationXRef.current) * 0.08;
+      rotationYRef.current += (targetRotationY.current - rotationYRef.current) * 0.08;
       
       shoeGroup.rotation.y = rotationYRef.current;
       shoeGroup.rotation.x = rotationXRef.current;
@@ -1311,16 +1448,21 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
         isIdle.current = true;
       }
 
-      // Auto-rotation & floating motion
+      // Auto-rotation & figure-8 floating motion
       if ((isIdle.current || isAutoRotate) && !isDragging.current && !isDraggingLogo.current) {
         if (isAutoRotate) {
-          targetRotationY.current += 0.005; 
+          targetRotationY.current += 0.003; // Slower, more elegant rotation
         }
-        const floatOffset = Math.sin(Date.now() * 0.002) * 0.025;
-        shoeGroup.position.y = 0.05 + floatOffset;
-        shadowMesh.scale.setScalar(1 - floatOffset * 0.85);
+        const time = Date.now() * 0.0015;
+        // Figure-8 motion using sin + cos combination
+        const floatY = Math.sin(time) * 0.020 + Math.sin(time * 2.1) * 0.008;
+        const floatX = Math.cos(time * 0.7) * 0.004;
+        shoeGroup.position.y = 0.05 + floatY;
+        shoeGroup.position.x = floatX;
+        shadowMesh.scale.setScalar(1 - floatY * 0.7);
       } else {
         shoeGroup.position.y = 0.05;
+        shoeGroup.position.x = 0;
         shadowMesh.scale.setScalar(1);
       }
 
@@ -1351,7 +1493,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
 
     window.addEventListener('resize', handleResize);
 
-    // CLEANUP
+    // CLEANUP — proper disposal
     return () => {
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
@@ -1396,10 +1538,12 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       shadowGeo.dispose();
       shadowMat.dispose();
       shadowTexture.dispose();
+      reflectionGeo.dispose();
+      reflectionMat.dispose();
     };
   }, [baseModel, soleType, laces.type, laces.thickness]); 
 
-  // Fast materials & accessories updates
+  // Fast materials & accessories updates — using MeshPhysicalMaterial
   useEffect(() => {
     const meshes = meshesRef.current;
     const textures = texturesRef.current;
@@ -1425,48 +1569,58 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       coreMat.emissive.set(colors.airBubble || '#00E5FF');
     }
 
-    const upperMat = meshes.upper.material as THREE.MeshStandardMaterial;
+    // Update MeshPhysicalMaterial properties based on material type
+    const matProps = getUpperMaterialProps(material, textures);
+    const upperMat = meshes.upper.material as THREE.MeshPhysicalMaterial;
     upperMat.color.set(colors.upper || '#FFFFFF');
-    upperMat.roughness = material === 'leather' ? 0.35 : material === 'suede' ? 0.9 : 0.6;
-    upperMat.metalness = material === 'leather' ? 0.1 : 0.0;
-    upperMat.map = material === 'mesh' ? textures.mesh! : material === 'knit' ? textures.knit! : material === 'canvas' ? textures.canvas! : null;
-    upperMat.bumpMap = material === 'leather' ? textures.leather! : null;
+    upperMat.roughness = matProps.roughness;
+    upperMat.metalness = matProps.metalness;
+    upperMat.clearcoat = matProps.clearcoat || 0;
+    upperMat.clearcoatRoughness = matProps.clearcoatRoughness || 0;
+    upperMat.sheen = matProps.sheen || 0;
+    upperMat.sheenRoughness = matProps.sheenRoughness || 0;
+    if (matProps.sheenColor) upperMat.sheenColor = matProps.sheenColor;
+    upperMat.map = matProps.map || null;
+    upperMat.bumpMap = matProps.bumpMap || null;
+    upperMat.bumpScale = matProps.bumpScale || 0.004;
     upperMat.needsUpdate = true;
 
     if (meshes.toeCap) {
-      const mat = meshes.toeCap.material as THREE.MeshStandardMaterial;
+      const mat = meshes.toeCap.material as THREE.MeshPhysicalMaterial;
       mat.color.set(colors.toeBox || '#FFFFFF');
-      mat.roughness = upperMat.roughness;
-      mat.metalness = upperMat.metalness;
-      mat.map = upperMat.map;
-      mat.bumpMap = upperMat.bumpMap;
+      mat.roughness = matProps.roughness;
+      mat.metalness = matProps.metalness;
+      mat.clearcoat = matProps.clearcoat || 0;
+      mat.clearcoatRoughness = matProps.clearcoatRoughness || 0;
+      mat.map = matProps.map || null;
+      mat.bumpMap = matProps.bumpMap || null;
       mat.needsUpdate = true;
     }
 
     if (meshes.heelCounter) {
-      const mat = meshes.heelCounter.material as THREE.MeshStandardMaterial;
+      const mat = meshes.heelCounter.material as THREE.MeshPhysicalMaterial;
       mat.color.set(colors.heel || '#FFFFFF');
-      mat.roughness = upperMat.roughness;
-      mat.metalness = upperMat.metalness;
-      mat.map = upperMat.map;
-      mat.bumpMap = upperMat.bumpMap;
+      mat.roughness = matProps.roughness;
+      mat.metalness = matProps.metalness;
+      mat.map = matProps.map || null;
+      mat.bumpMap = matProps.bumpMap || null;
       mat.needsUpdate = true;
     }
 
     if (meshes.sidePanelL && meshes.sidePanelR) {
-      const panelMat = meshes.sidePanelL.material as THREE.MeshStandardMaterial;
+      const panelMat = meshes.sidePanelL.material as THREE.MeshPhysicalMaterial;
       panelMat.color.set(colors.sidePanels || '#FFFFFF');
-      panelMat.roughness = upperMat.roughness;
-      panelMat.map = upperMat.map;
+      panelMat.roughness = matProps.roughness;
+      panelMat.map = matProps.map || null;
       panelMat.needsUpdate = true;
       meshes.sidePanelR.material = panelMat;
     }
 
     if (meshes.tongue) {
-      const tongueMat = meshes.tongue.material as THREE.MeshStandardMaterial;
+      const tongueMat = meshes.tongue.material as THREE.MeshPhysicalMaterial;
       tongueMat.color.set(colors.tongue || '#FFFFFF');
-      tongueMat.roughness = upperMat.roughness;
-      tongueMat.map = upperMat.map;
+      tongueMat.roughness = matProps.roughness;
+      tongueMat.map = matProps.map || null;
       tongueMat.needsUpdate = true;
     }
 
@@ -1497,14 +1651,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       const ly3d = 0.44 - ((ly - 60) / 160) * 0.25;
 
       const uNorm = (lz3d + 1.1) / 2.2;
-      let wUpper = 0.22;
-      if (uNorm < 0.25) {
-        wUpper = 0.22 + 0.08 * (uNorm / 0.25);
-      } else if (uNorm < 0.65) {
-        wUpper = 0.30 + 0.03 * Math.sin(((uNorm - 0.25) / 0.4) * Math.PI);
-      } else {
-        wUpper = 0.33 * (1 - Math.pow((uNorm - 0.65) / 0.35, 2)) + 0.02;
-      }
+      const wUpper = getShoeWidth(uNorm);
       
       meshes.logoBadge.position.set(wUpper * 1.018, ly3d, lz3d);
       meshes.logoBadge.scale.setScalar(logo.scale);
