@@ -191,7 +191,7 @@ export const Hero: React.FC<HeroProps> = ({
           width: 100%;
           height: auto;
           filter: drop-shadow(0 25px 40px rgba(11, 30, 45, 0.28));
-          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: transform var(--transition-spring);
         }
 
         .hero-shoe-stage:hover .hero-shoe-image {
@@ -218,16 +218,19 @@ export const Hero: React.FC<HeroProps> = ({
         .hero-badge {
           display: inline-flex;
           align-items: center;
-          gap: 6px;
-          padding: 6px 14px;
-          border-radius: 20px;
-          background: rgba(255, 255, 255, 0.4);
-          border: 1px solid rgba(255, 255, 255, 0.7);
+          gap: 8px;
+          padding: 6px 16px;
+          border-radius: 9999px;
+          background: var(--glass-bg);
+          border: 1px solid var(--glass-border-standard);
+          backdrop-filter: blur(var(--glass-blur));
+          -webkit-backdrop-filter: blur(var(--glass-blur));
           font-size: 0.76rem;
           font-weight: 800;
           letter-spacing: 0.08em;
           color: var(--oddshoe-navy-900);
           margin-bottom: 12px;
+          box-shadow: var(--glass-shadow);
         }
 
         .badge-sparkle {
@@ -262,17 +265,18 @@ export const Hero: React.FC<HeroProps> = ({
         .primary-explore-btn {
           padding: 12px 28px;
           border-radius: 12px;
-          border: 1.5px solid rgba(255, 255, 255, 0.8);
-          background: rgba(255, 255, 255, 0.35);
+          border: 1.5px solid rgba(255, 255, 255, 0.85);
+          background: rgba(255, 255, 255, 0.4);
           color: var(--oddshoe-white);
           font-weight: 700;
           font-size: 0.95rem;
           display: inline-flex;
           align-items: center;
           gap: 8px;
-          backdrop-filter: blur(10px);
-          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-          box-shadow: var(--shadow-md);
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
+          transition: all var(--transition-fast);
+          box-shadow: 0 8px 24px rgba(11, 30, 45, 0.12);
         }
 
         .primary-explore-btn:hover {
@@ -288,7 +292,7 @@ export const Hero: React.FC<HeroProps> = ({
         }
 
         .cta-arrow {
-          transition: transform 0.2s ease;
+          transition: transform var(--transition-fast);
         }
 
         /* Carousel Controls (01/05) */
@@ -301,11 +305,13 @@ export const Hero: React.FC<HeroProps> = ({
           display: flex;
           align-items: center;
           gap: 18px;
-          background: rgba(255, 255, 255, 0.25);
-          backdrop-filter: blur(12px);
+          background: var(--glass-bg);
+          border: 1px solid var(--glass-border-standard);
+          backdrop-filter: blur(var(--glass-blur));
+          -webkit-backdrop-filter: blur(var(--glass-blur));
           padding: 8px 20px;
           border-radius: 30px;
-          border: 1px solid rgba(255, 255, 255, 0.4);
+          box-shadow: var(--glass-shadow);
         }
 
         .ctrl-arrow {
@@ -313,7 +319,9 @@ export const Hero: React.FC<HeroProps> = ({
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: transform 0.2s ease;
+          transition: transform var(--transition-fast);
+          min-width: 44px;
+          min-height: 44px;
         }
 
         .ctrl-arrow:hover {
@@ -334,20 +342,21 @@ export const Hero: React.FC<HeroProps> = ({
           z-index: 5;
           display: flex;
           align-items: center;
-          gap: 14px;
-          padding: 14px 18px;
+          gap: 16px;
+          padding: 16px;
           border-radius: 16px;
-          background: rgba(255, 255, 255, 0.45);
-          backdrop-filter: blur(16px);
-          border: 1px solid rgba(255, 255, 255, 0.7);
-          box-shadow: var(--shadow-md);
+          background: var(--glass-bg);
+          border: 1px solid var(--glass-border-standard);
+          backdrop-filter: blur(var(--glass-blur));
+          -webkit-backdrop-filter: blur(var(--glass-blur));
+          box-shadow: var(--glass-shadow);
           margin-top: 240px;
           max-width: 320px;
-          transition: all 0.3s ease;
+          transition: all var(--transition-normal);
         }
 
         .trending-arrivals-card:hover {
-          background: rgba(255, 255, 255, 0.65);
+          background: var(--glass-bg-hover);
           transform: translateY(-3px);
         }
 
@@ -396,12 +405,16 @@ export const Hero: React.FC<HeroProps> = ({
           font-size: 0.72rem;
           font-weight: 700;
           color: var(--oddshoe-navy-900);
-          transition: all 0.2s ease;
+          transition: all var(--transition-fast);
         }
 
         .trending-shop-btn:hover {
           background: var(--oddshoe-amber);
           border-color: var(--oddshoe-amber);
+        }
+
+        .trending-shop-btn:active {
+          transform: scale(0.95);
         }
 
         @media (max-width: 1024px) {
@@ -428,22 +441,79 @@ export const Hero: React.FC<HeroProps> = ({
         }
 
         @media (max-width: 768px) {
+          .oddshoe-hero {
+            padding: 16px 16px 80px; /* Reduced vertical & side padding */
+          }
+
+          .hero-radial-glow {
+            width: 400px;
+            height: 400px;
+          }
+
+          .hero-typography-backdrop {
+            top: 24%; /* Center aligned with shoe stage */
+          }
+
           .hero-typography-backdrop .display-hero-text {
-            font-size: clamp(3rem, 15vw, 6rem);
+            font-size: clamp(3rem, 15vw, 5.5rem);
+            color: rgba(255, 255, 255, 0.45); /* Soft background text, zero competition */
+            text-shadow: 0 10px 20px rgba(11, 30, 45, 0.05);
           }
-          .hero-content-left {
-            margin-top: 260px;
-            padding: 0 16px;
-          }
-          .hero-tagline {
-            font-size: 1.8rem;
-          }
-          .hero-description {
-            font-size: 0.85rem;
-          }
+
           .hero-shoe-stage {
             width: 300px;
-            top: 22%;
+            top: 24%; /* Optical centering & vertical balance */
+          }
+
+          .hero-content-left {
+            margin-top: 224px; /* Compressed layout by ~20% (8px system) */
+            padding: 0 16px;
+            align-items: center;
+          }
+
+          .hero-badge {
+            margin-bottom: 8px; /* 8px system margin */
+          }
+
+          .hero-tagline {
+            font-size: 1.8rem;
+            line-height: 1.2; /* Better line height */
+            letter-spacing: -0.01em; /* Better letter spacing */
+            max-width: 290px; /* Narrower width for optimal balance */
+            margin-bottom: 8px; /* 8px system margin */
+          }
+
+          .hero-description {
+            font-size: 0.85rem;
+            max-width: 320px; /* Narrower width */
+            line-height: 1.55; /* Better line height */
+            color: var(--oddshoe-navy-900);
+            opacity: 0.7; /* Softer text color */
+            margin-top: 8px;
+            margin-bottom: 24px; /* 8px system margin */
+          }
+
+          .primary-explore-btn {
+            padding: 12px 28px;
+          }
+
+          .primary-explore-btn:active {
+            transform: scale(0.96) translateY(0); /* Better pressed state */
+            background: rgba(255, 255, 255, 0.6);
+          }
+
+          .hero-carousel-controls {
+            bottom: 24px; /* 8px system spacing */
+            padding: 6px 16px;
+          }
+
+          .ctrl-arrow {
+            min-width: 44px;
+            min-height: 44px; /* 44px touch target compliance */
+          }
+
+          .trending-arrivals-card {
+            margin-top: 24px; /* 8px system spacing */
           }
         }
       `}</style>

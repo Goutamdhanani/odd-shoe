@@ -49,6 +49,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           src={product.image} 
           alt={product.name} 
           className={`card-shoe-img ${isHovered ? 'scale-up' : ''}`} 
+          loading="lazy"
         />
         <div className="card-shoe-shadow" />
         
@@ -88,20 +89,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
       <style>{`
         .oddshoe-product-card {
-          background: rgba(255, 255, 255, 0.4);
-          backdrop-filter: blur(14px);
-          border: 1px solid rgba(255, 255, 255, 0.65);
+          background: var(--glass-bg);
+          backdrop-filter: blur(var(--glass-blur));
+          -webkit-backdrop-filter: blur(var(--glass-blur));
+          border: 1px solid var(--glass-border-standard);
           border-radius: 20px;
           padding: 18px;
           position: relative;
           display: flex;
           flex-direction: column;
-          transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-          box-shadow: 0 10px 25px rgba(11, 30, 45, 0.06);
+          transition: all var(--transition-normal);
+          box-shadow: var(--glass-shadow);
         }
 
         .oddshoe-product-card:hover {
-          background: rgba(255, 255, 255, 0.6);
+          background: var(--glass-bg-hover);
           transform: translateY(-6px);
           box-shadow: 0 20px 40px rgba(11, 30, 45, 0.12);
         }
@@ -141,12 +143,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           width: 34px;
           height: 34px;
           border-radius: 10px;
-          background: rgba(255, 255, 255, 0.5);
-          border: 1px solid rgba(255, 255, 255, 0.7);
+          background: rgba(255, 255, 255, 0.4);
+          border: 1px solid rgba(255, 255, 255, 0.6);
           display: flex;
           align-items: center;
           justify-content: center;
-          transition: all 0.2s ease;
+          transition: all var(--transition-fast);
         }
 
         .card-wishlist-btn:hover {
@@ -171,7 +173,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           max-height: 160px;
           object-fit: contain;
           filter: drop-shadow(0 12px 20px rgba(11, 30, 45, 0.18));
-          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: transform var(--transition-normal);
         }
 
         .card-shoe-img.scale-up {
@@ -258,7 +260,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           align-items: center;
           justify-content: center;
           color: var(--oddshoe-navy-900);
-          transition: all 0.25s ease;
+          position: relative;
+          transition: all var(--transition-fast);
         }
 
         .add-to-bag-btn:hover {
@@ -271,12 +274,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         @media (max-width: 640px) {
           .oddshoe-product-card {
-            padding: 10px;
+            padding: 16px; /* Expanded padding using 8px system */
             border-radius: 14px;
           }
           .card-image-stage {
             height: 120px;
-            margin-top: 5px;
+            margin-top: 8px; /* 8px system spacing */
           }
           .card-shoe-img {
             max-height: 90px;
@@ -286,7 +289,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           }
           .card-product-sub {
             font-size: 0.7rem;
-            margin-bottom: 8px;
+            margin-bottom: 8px; /* 8px system spacing */
           }
           .price-val {
             font-size: 0.85rem;
@@ -302,6 +305,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             border-radius: 8px;
             top: 8px;
             right: 8px;
+          }
+          /* Invisible touch zone expansions to meet the 44px accessibility standard */
+          .card-wishlist-btn::after, .add-to-bag-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 44px;
+            height: 44px;
           }
           .card-wishlist-btn svg {
             width: 14px;

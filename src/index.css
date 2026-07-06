@@ -6,6 +6,17 @@
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 72px;
+}
+
+@media (max-width: 880px) {
+  html {
+    scroll-padding-top: 96px; /* Offset for wrapped mobile header */
+  }
+}
+
 html, body {
   width: 100%;
   min-height: 100vh;
@@ -66,6 +77,9 @@ a {
 
 .animate-float {
   animation: floatShoe 5s ease-in-out infinite;
+  will-change: transform;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
 }
 
 @keyframes pulseGlow {
@@ -81,6 +95,9 @@ a {
 
 .animate-glow {
   animation: pulseGlow 4s ease-in-out infinite;
+  will-change: transform, opacity;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
 }
 
 /* Scrollbar styling */

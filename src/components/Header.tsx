@@ -112,11 +112,11 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
 
           <button 
-            className="mobile-toggle-btn"
+            className="action-btn mobile-toggle-btn"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle Menu"
           >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            {mobileMenuOpen ? <X size={20} strokeWidth={2} /> : <Menu size={20} strokeWidth={2} />}
           </button>
         </div>
       </div>
@@ -140,10 +140,11 @@ export const Header: React.FC<HeaderProps> = ({
           top: 0;
           z-index: 100;
           background: rgba(127, 200, 232, 0.45);
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
+          backdrop-filter: blur(var(--glass-blur));
+          -webkit-backdrop-filter: blur(var(--glass-blur));
           border-bottom: 1px solid rgba(255, 255, 255, 0.35);
           padding: 14px 32px;
+          transition: padding var(--transition-normal);
         }
 
         .header-inner {
@@ -180,6 +181,9 @@ export const Header: React.FC<HeaderProps> = ({
           font-weight: 800;
           font-size: 1.4rem;
           letter-spacing: -0.03em;
+          line-height: 1;
+          display: flex;
+          align-items: center;
         }
 
         .brand-odd {
@@ -204,7 +208,7 @@ export const Header: React.FC<HeaderProps> = ({
           letter-spacing: 0.05em;
           color: var(--oddshoe-navy-900);
           opacity: 0.85;
-          transition: all 0.2s ease;
+          transition: all var(--transition-fast);
           display: flex;
           align-items: center;
           gap: 6px;
@@ -217,7 +221,7 @@ export const Header: React.FC<HeaderProps> = ({
         }
 
         .dropdown-trigger .chevron {
-          transition: transform 0.2s ease;
+          transition: transform var(--transition-fast);
         }
 
         .dropdown-trigger .chevron.open {
@@ -251,7 +255,7 @@ export const Header: React.FC<HeaderProps> = ({
           font-weight: 600;
           font-size: 0.84rem;
           color: var(--oddshoe-navy-900);
-          transition: background 0.2s ease;
+          transition: background var(--transition-fast);
         }
 
         .dropdown-menu button:hover {
@@ -269,18 +273,21 @@ export const Header: React.FC<HeaderProps> = ({
           width: 42px;
           height: 42px;
           border-radius: 12px;
-          background: rgba(255, 255, 255, 0.35);
-          border: 1px solid rgba(255, 255, 255, 0.6);
+          background: var(--glass-bg);
+          border: 1px solid var(--glass-border-standard);
+          backdrop-filter: blur(var(--glass-blur));
+          -webkit-backdrop-filter: blur(var(--glass-blur));
           display: flex;
           align-items: center;
           justify-content: center;
           color: var(--oddshoe-navy-900);
           position: relative;
-          transition: all 0.25 ease;
+          transition: all var(--transition-fast);
+          box-shadow: var(--glass-shadow);
         }
 
         .action-btn:hover {
-          background: rgba(255, 255, 255, 0.7);
+          background: var(--glass-bg-hover);
           transform: translateY(-1px);
         }
 
@@ -292,9 +299,9 @@ export const Header: React.FC<HeaderProps> = ({
           color: var(--oddshoe-navy-900);
           font-weight: 800;
           font-size: 0.72rem;
-          min-width: 20px;
+          width: 20px;
           height: 20px;
-          border-radius: 10px;
+          border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -303,8 +310,6 @@ export const Header: React.FC<HeaderProps> = ({
 
         .mobile-toggle-btn {
           display: none;
-          color: var(--oddshoe-navy-900);
-          padding: 6px;
         }
 
         .header-trust-badges {
@@ -351,6 +356,10 @@ export const Header: React.FC<HeaderProps> = ({
         }
 
         @media (max-width: 880px) {
+          .oddshoe-header {
+            padding: 10px 16px;
+          }
+
           .desktop-nav {
             display: none;
           }
@@ -361,28 +370,83 @@ export const Header: React.FC<HeaderProps> = ({
 
           .header-inner {
             flex-wrap: wrap;
-            row-gap: 8px;
+            row-gap: 6px;
+          }
+
+          .brand-lockup {
+            gap: 8px;
+          }
+
+          .brand-logo-chip {
+            width: 32px;
+            height: 32px;
+          }
+
+          .brand-wordmark {
+            font-size: 1.25rem;
+          }
+
+          .header-actions {
+            gap: 8px;
+          }
+
+          .action-btn {
+            width: 44px;
+            height: 44px; /* comfortable 44px touch target */
+            border-radius: 12px;
+          }
+
+          .action-btn:active {
+            transform: scale(0.95);
+            background: var(--glass-bg-active);
+          }
+
+          .action-badge {
+            top: -2px;
+            right: -2px;
+            width: 18px;
+            height: 18px;
+            min-width: 18px;
+            font-size: 0.65rem;
+            border-width: 1.5px;
           }
 
           .header-trust-badges {
             display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
             width: 100%;
             order: 3;
             margin-left: 0;
             border-left: none;
-            padding-left: 0;
-            justify-content: center;
+            padding: 8px 4px 2px;
             border-top: 1px solid rgba(255, 255, 255, 0.2);
-            padding-top: 8px;
-            gap: 12px;
+            gap: 16px;
+            justify-content: space-between;
+          }
+
+          .header-trust-badges::-webkit-scrollbar {
+            display: none;
           }
 
           .header-trust-badge {
-            gap: 4px;
+            gap: 6px;
+            flex-shrink: 0;
+            align-items: baseline;
+          }
+
+          .badge-icon {
+            align-self: center;
+            display: inline-flex;
+            vertical-align: middle;
           }
 
           .badge-title {
-            font-size: 0.62rem;
+            font-size: clamp(0.6rem, 2.2vw, 0.72rem);
+            white-space: nowrap;
             opacity: 0.9;
           }
         }

@@ -102,22 +102,29 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
         .pill-btn {
           padding: 8px 18px;
           border-radius: 20px;
-          background: rgba(255, 255, 255, 0.35);
-          border: 1px solid rgba(255, 255, 255, 0.6);
+          background: var(--glass-bg);
+          border: 1px solid var(--glass-border-standard);
+          backdrop-filter: blur(var(--glass-blur));
+          -webkit-backdrop-filter: blur(var(--glass-blur));
           font-weight: 700;
           font-size: 0.84rem;
           color: var(--oddshoe-navy-900);
-          transition: all 0.25s ease;
+          transition: all var(--transition-fast);
         }
 
         .pill-btn:hover {
-          background: rgba(255, 255, 255, 0.6);
+          background: var(--glass-bg-hover);
+        }
+
+        .pill-btn:active {
+          transform: scale(0.95);
         }
 
         .pill-btn.active {
           background: var(--oddshoe-navy-900);
           color: var(--oddshoe-white);
           border-color: var(--oddshoe-navy-900);
+          box-shadow: 0 4px 12px rgba(11, 30, 45, 0.15);
         }
 
         .products-grid {
@@ -127,12 +134,31 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
         }
 
         @media (max-width: 640px) {
+          .category-pills {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            width: 100%;
+            padding: 4px 4px 8px;
+            gap: 8px;
+          }
+          .category-pills::-webkit-scrollbar {
+            display: none;
+          }
+          .pill-btn {
+            flex-shrink: 0;
+            font-size: 0.8rem;
+            padding: 8px 16px;
+          }
           .products-grid {
             grid-template-columns: repeat(2, 1fr);
-            gap: 14px;
+            gap: 16px; /* Align to 8px system */
           }
           .oddshoe-products-section {
             padding: 0 16px;
+            margin: 40px auto 24px; /* Align to 8px system */
           }
         }
       `}</style>

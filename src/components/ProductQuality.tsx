@@ -57,6 +57,7 @@ export const ProductQuality: React.FC<ProductQualityProps> = () => {
             src="/shoes/quality_green.png" 
             alt="Emerald Quality Sneaker Drop" 
             className="quality-shoe-img animate-float"
+            loading="lazy"
           />
           <div className="quality-shoe-shadow" />
 
@@ -101,17 +102,19 @@ export const ProductQuality: React.FC<ProductQualityProps> = () => {
         .quality-feature-card {
           display: flex;
           align-items: flex-start;
-          gap: 18px;
+          gap: 16px; /* 8px system gap */
           padding: 20px 24px;
           border-radius: 18px;
-          background: rgba(255, 255, 255, 0.3);
-          backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.5);
-          transition: all 0.3s ease;
+          background: var(--glass-bg);
+          backdrop-filter: blur(var(--glass-blur));
+          -webkit-backdrop-filter: blur(var(--glass-blur));
+          border: 1px solid var(--glass-border-standard);
+          transition: all var(--transition-normal);
+          box-shadow: var(--glass-shadow);
         }
 
         .quality-feature-card:hover {
-          background: rgba(255, 255, 255, 0.5);
+          background: var(--glass-bg-hover);
           transform: translateX(6px);
         }
 
@@ -189,8 +192,8 @@ export const ProductQuality: React.FC<ProductQualityProps> = () => {
 
         .spec-chip {
           position: absolute;
-          bottom: 20px;
-          right: 20px;
+          bottom: 24px; /* 8px system */
+          right: 24px; /* 8px system */
           z-index: 4;
           background: rgba(255, 255, 255, 0.85);
           backdrop-filter: blur(12px);
@@ -215,16 +218,16 @@ export const ProductQuality: React.FC<ProductQualityProps> = () => {
             max-width: 320px;
           }
           .spec-chip {
-            right: 5%;
-            bottom: 10px;
+            right: 16px; /* 8px system spacing */
+            bottom: 16px; /* 8px system spacing */
             font-size: 0.72rem;
           }
           .oddshoe-quality-section {
             padding: 0 16px;
-            margin: 40px auto 20px;
+            margin: 40px auto 24px; /* 8px system spacing */
           }
           .quality-feature-card {
-            padding: 14px;
+            padding: 16px; /* 8px system spacing */
             gap: 12px;
           }
           .feat-title {
