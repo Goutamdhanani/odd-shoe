@@ -112,6 +112,39 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     insoleTexture?: THREE.CanvasTexture;
   }>({});
 
+  // Dynamic sole parameters based on soleType
+  let midsoleHeight = 0.14;
+  let outsoleHeight = 0.04;
+  let soleBevelThickness = 0.04;
+  let soleBevelSize = 0.03;
+
+  if (soleType === 'chunky') {
+    midsoleHeight = 0.22;
+    outsoleHeight = 0.06;
+    soleBevelThickness = 0.08;
+    soleBevelSize = 0.05;
+  } else if (soleType === 'lifestyle') {
+    midsoleHeight = 0.08;
+    outsoleHeight = 0.03;
+    soleBevelThickness = 0.02;
+    soleBevelSize = 0.02;
+  } else if (soleType === 'running') {
+    midsoleHeight = 0.12;
+    outsoleHeight = 0.04;
+    soleBevelThickness = 0.04;
+    soleBevelSize = 0.03;
+  } else if (soleType === 'foam') {
+    midsoleHeight = 0.17;
+    outsoleHeight = 0.04;
+    soleBevelThickness = 0.05;
+    soleBevelSize = 0.04;
+  } else if (soleType === 'bubble') {
+    midsoleHeight = 0.15;
+    outsoleHeight = 0.04;
+    soleBevelThickness = 0.04;
+    soleBevelSize = 0.03;
+  }
+
   // Helper to check base model type
   const isHighTop = baseModel === 'High Top' || baseModel === 'Basketball';
   const isLowTop = baseModel === 'Low Top' || baseModel === 'Skate';
@@ -346,7 +379,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     geom.computeVertexNormals();
   };
 
-  const createSoleGeometry = (height: number) => {
+  const createSoleGeometry = (height: number, bevelThickness: number = 0.04, bevelSize: number = 0.03) => {
     const shape = new THREE.Shape();
     // More anatomical sole footprint: wider forefoot, narrow arch, medium heel
     shape.moveTo(0, 1.12);
@@ -368,8 +401,8 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     const geom = new THREE.ExtrudeGeometry(shape, {
       depth: height,
       bevelEnabled: true,
-      bevelThickness: 0.04,
-      bevelSize: 0.03,
+      bevelThickness: bevelThickness,
+      bevelSize: bevelSize,
       bevelSegments: 8,
       curveSegments: 48
     });
@@ -397,7 +430,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       const soleY = z > 0
         ? 0.10 * Math.pow(z / 1.15, 2) + 0.06 * Math.pow(z / 1.15, 3)
         : 0.05 * Math.pow(z / 1.15, 2);
-      const yBase = soleY + 0.14;
+      const yBase = soleY + midsoleHeight;
 
       for (let r = 0; r < radialSegments; r++) {
         const theta = (r / radialSegments) * Math.PI * 2;
@@ -473,7 +506,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       const soleY = z > 0
         ? 0.10 * Math.pow(z / 1.15, 2) + 0.06 * Math.pow(z / 1.15, 3)
         : 0.05 * Math.pow(z / 1.15, 2);
-      const yBase = soleY + 0.14;
+      const yBase = soleY + midsoleHeight;
 
       for (let r = 0; r < radialSegments; r++) {
         const theta = (r / radialSegments) * Math.PI * 2;
@@ -547,7 +580,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       const soleY = z > 0
         ? 0.10 * Math.pow(z / 1.15, 2) + 0.06 * Math.pow(z / 1.15, 3)
         : 0.05 * Math.pow(z / 1.15, 2);
-      const yBase = soleY + 0.14;
+      const yBase = soleY + midsoleHeight;
 
       for (let r = 0; r <= radialSegments; r++) {
         const tRad = r / radialSegments;
@@ -700,7 +733,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       const soleY = z > 0
         ? 0.10 * Math.pow(z / 1.15, 2) + 0.06 * Math.pow(z / 1.15, 3)
         : 0.05 * Math.pow(z / 1.15, 2);
-      const yBase = soleY + 0.14;
+      const yBase = soleY + midsoleHeight;
 
       const leftTheta = 0.38 * Math.PI;
       const rightTheta = 0.62 * Math.PI;
@@ -1068,7 +1101,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     const textures = getProceduralTextures();
 
     // Sole — improved geometry
-    const midsoleGeom = createSoleGeometry(0.14);
+    const midsoleGeom = createSoleGeometry(midsoleHeight, soleBevelThickness, soleBevelSize);
     const midsoleMat = new THREE.MeshStandardMaterial({
       color: colors.midsole || '#FFFFFF',
       roughness: 0.50,
@@ -1080,8 +1113,8 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     shoeGroup.add(midsole);
     meshesRef.current.midsole = midsole;
 
-    const outsoleGeom = createSoleGeometry(0.04);
-    outsoleGeom.translate(0, -0.04, 0); 
+    const outsoleGeom = createSoleGeometry(outsoleHeight, soleBevelThickness * 0.5, soleBevelSize * 0.5);
+    outsoleGeom.translate(0, -outsoleHeight, 0); 
     const outsoleMat = new THREE.MeshStandardMaterial({
       color: accessories.glowOutsole ? '#70E000' : colors.outsole || '#333333',
       roughness: 0.8,
@@ -1118,9 +1151,9 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     const hasBubble = soleType === 'air' || soleType === 'bubble';
 
     const bubbleGroupL = new THREE.Group();
-    bubbleGroupL.position.set(-0.16, 0.15, -0.45); 
+    bubbleGroupL.position.set(-0.16, midsoleHeight + 0.01, -0.45); 
     const bubbleGroupR = new THREE.Group();
-    bubbleGroupR.position.set(0.16, 0.15, -0.45); 
+    bubbleGroupR.position.set(0.16, midsoleHeight + 0.01, -0.45); 
 
     const glassMeshL = new THREE.Mesh(airGlassGeom, airGlassMat);
     const coreMeshL = new THREE.Mesh(airCoreGeom, airCoreMat);
@@ -1231,7 +1264,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     const soleYTongue = zTongue > 0
       ? 0.10 * Math.pow(zTongue / 1.15, 2) + 0.06 * Math.pow(zTongue / 1.15, 3)
       : 0.05 * Math.pow(zTongue / 1.15, 2);
-    const yBaseTongue = soleYTongue + 0.14;
+    const yBaseTongue = soleYTongue + midsoleHeight;
     const hCollar = isHighTop ? 0.82 : isLowTop ? 0.40 : 0.50;
 
     tongueLabel.position.set(0, yBaseTongue + hCollar + (isHighTop ? 0.07 : 0.04), -0.15);
@@ -1314,7 +1347,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     const soleYHeel = zHeel > 0
       ? 0.10 * Math.pow(zHeel / 1.15, 2) + 0.06 * Math.pow(zHeel / 1.15, 3)
       : 0.05 * Math.pow(zHeel / 1.15, 2);
-    const yBaseHeel = soleYHeel + 0.14;
+    const yBaseHeel = soleYHeel + midsoleHeight;
     const hCollarBack = isHighTop ? 0.68 : isLowTop ? 0.34 : 0.42;
 
     pullTab.position.set(0, yBaseHeel + hCollarBack - 0.35, 0.0);
@@ -1326,7 +1359,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     const soleYCarbon = zCarbon > 0
       ? 0.10 * Math.pow(zCarbon / 1.15, 2) + 0.06 * Math.pow(zCarbon / 1.15, 3)
       : 0.05 * Math.pow(zCarbon / 1.15, 2);
-    const yBaseCarbon = soleYCarbon + 0.14;
+    const yBaseCarbon = soleYCarbon + midsoleHeight;
 
     const cPos = carbonHeelGeom.attributes.position;
     for (let i = 0; i < cPos.count; i++) {
@@ -1361,7 +1394,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     const soleYReflective = zReflective > 0
       ? 0.10 * Math.pow(zReflective / 1.15, 2) + 0.06 * Math.pow(zReflective / 1.15, 3)
       : 0.05 * Math.pow(zReflective / 1.15, 2);
-    const yBaseReflective = soleYReflective + 0.14;
+    const yBaseReflective = soleYReflective + midsoleHeight;
 
     reflectiveStrip.position.set(0, yBaseReflective + 0.16, -1.06);
     reflectiveStrip.rotation.set(0.1, 0, 0);
@@ -1392,7 +1425,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       const soleY = z > 0
         ? 0.10 * Math.pow(z / 1.15, 2) + 0.06 * Math.pow(z / 1.15, 3)
         : 0.05 * Math.pow(z / 1.15, 2);
-      const yBaseEl = soleY + 0.14;
+      const yBaseEl = soleY + midsoleHeight;
 
       const leftTheta = 0.38 * Math.PI;
       const rightTheta = 0.62 * Math.PI;

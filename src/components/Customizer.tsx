@@ -24,6 +24,57 @@ const BASE_MODELS = [
   { id: 'training', name: 'Training', desc: 'Cross-training athletic shoe designed for multi-directional stability.', price: 13000, image: '/shoes/ai_air.png' },
 ];
 
+// Default configurations for base models to make changes interactive
+const BASE_DEFAULTS: Record<string, {
+  soleType: string;
+  material: string;
+  colors: Record<string, string>;
+  laces: { type: string; thickness: string; color: string };
+}> = {
+  'Runner': {
+    soleType: 'running',
+    material: 'mesh',
+    colors: { upper: '#FFFFFF', toeBox: '#EAF6FC', heel: '#FFFFFF', sidePanels: '#FFFFFF', tongue: '#FFFFFF', midsole: '#FFFFFF', outsole: '#16181C', airBubble: '#7FC8E8', laceLoops: '#FFFFFF', heelPull: '#7FC8E8', stitching: '#CCCCCC' },
+    laces: { type: 'flat', thickness: 'medium', color: '#FFFFFF' }
+  },
+  'High Top': {
+    soleType: 'lifestyle',
+    material: 'leather',
+    colors: { upper: '#FFFFFF', toeBox: '#FFFFFF', heel: '#4C516D', sidePanels: '#4C516D', tongue: '#FFFFFF', midsole: '#FFFFFF', outsole: '#16181C', airBubble: '#FFFFFF', laceLoops: '#4C516D', heelPull: '#FFFFFF', stitching: '#FFFFFF' },
+    laces: { type: 'flat', thickness: 'medium', color: '#4C516D' }
+  },
+  'Low Top': {
+    soleType: 'lifestyle',
+    material: 'canvas',
+    colors: { upper: '#FFFFFF', toeBox: '#FFFFFF', heel: '#D4EDF9', sidePanels: '#FFFFFF', tongue: '#FFFFFF', midsole: '#FFFFFF', outsole: '#16181C', airBubble: '#FFFFFF', laceLoops: '#FFFFFF', heelPull: '#D4EDF9', stitching: '#CCCCCC' },
+    laces: { type: 'flat', thickness: 'medium', color: '#16181C' }
+  },
+  'Basketball': {
+    soleType: 'chunky',
+    material: 'leather',
+    colors: { upper: '#FF007F', toeBox: '#0B1E2D', heel: '#FF007F', sidePanels: '#0B1E2D', tongue: '#FF007F', midsole: '#FFFFFF', outsole: '#16181C', airBubble: '#FF007F', laceLoops: '#FF007F', heelPull: '#FFFFFF', stitching: '#FF007F' },
+    laces: { type: 'rope', thickness: 'thick', color: '#E0FF00' }
+  },
+  'Lifestyle': {
+    soleType: 'lifestyle',
+    material: 'suede',
+    colors: { upper: '#8D5B4C', toeBox: '#F5A63B', heel: '#8D5B4C', sidePanels: '#FAF0E6', tongue: '#8D5B4C', midsole: '#FAF0E6', outsole: '#16181C', airBubble: '#FAF0E6', laceLoops: '#8D5B4C', heelPull: '#F5A63B', stitching: '#FAF0E6' },
+    laces: { type: 'flat', thickness: 'medium', color: '#8D5B4C' }
+  },
+  'Skate': {
+    soleType: 'lifestyle',
+    material: 'suede',
+    colors: { upper: '#16181C', toeBox: '#16181C', heel: '#8A7F8D', sidePanels: '#16181C', tongue: '#16181C', midsole: '#FFFFFF', outsole: '#111111', airBubble: '#16181C', laceLoops: '#16181C', heelPull: '#8A7F8D', stitching: '#3A3F47' },
+    laces: { type: 'flat', thickness: 'medium', color: '#16181C' }
+  },
+  'Training': {
+    soleType: 'foam',
+    material: 'knit',
+    colors: { upper: '#FFFFFF', toeBox: '#FFFFFF', heel: '#C0C0C0', sidePanels: '#FFFFFF', tongue: '#FFFFFF', midsole: '#C0C0C0', outsole: '#16181C', airBubble: '#FFFFFF', laceLoops: '#FFFFFF', heelPull: '#C0C0C0', stitching: '#CCCCCC' },
+    laces: { type: 'flat', thickness: 'medium', color: '#FFFFFF' }
+  }
+};
+
 // Presets Data
 const PRESETS = [
   {
@@ -738,6 +789,18 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                       onClick={() => {
                         setBaseModel(base.name);
                         setActivePreset(null);
+                        const defaults = BASE_DEFAULTS[base.name];
+                        if (defaults) {
+                          setSoleType(defaults.soleType);
+                          setMaterial(defaults.material);
+                          setColors(defaults.colors);
+                          setLaces(prev => ({
+                            ...prev,
+                            type: defaults.laces.type,
+                            thickness: defaults.laces.thickness,
+                            color: defaults.laces.color
+                          }));
+                        }
                         triggerToast(`Switched to ${base.name} Base`);
                       }}
                     >
