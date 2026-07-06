@@ -122,16 +122,14 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       {/* Mobile Menu Drawer */}
-      {mobileMenuOpen && (
-        <div className="mobile-menu-overlay">
-          <div className="mobile-menu-content">
-            <button className="mobile-link" onClick={() => { onNavigateSection('hero'); setMobileMenuOpen(false); }}>HOME</button>
-            <button className="mobile-link" onClick={() => { onNavigateSection('products'); setMobileMenuOpen(false); }}>OUR PRODUCTS</button>
-            <button className="mobile-link" onClick={() => { onNavigateSection('quality'); setMobileMenuOpen(false); }}>QUALITY</button>
-            <button className="mobile-link" onClick={() => { onNavigateSection('footer'); setMobileMenuOpen(false); }}>ABOUT</button>
-          </div>
+      <div className={`mobile-menu-overlay ${mobileMenuOpen ? 'open' : ''}`}>
+        <div className="mobile-menu-content">
+          <button className="mobile-link" onClick={() => { onNavigateSection('hero'); setMobileMenuOpen(false); }}>HOME</button>
+          <button className="mobile-link" onClick={() => { onNavigateSection('products'); setMobileMenuOpen(false); }}>OUR PRODUCTS</button>
+          <button className="mobile-link" onClick={() => { onNavigateSection('quality'); setMobileMenuOpen(false); }}>QUALITY</button>
+          <button className="mobile-link" onClick={() => { onNavigateSection('footer'); setMobileMenuOpen(false); }}>ABOUT</button>
         </div>
-      )}
+      </div>
 
       <style>{`
         .oddshoe-header {
@@ -412,42 +410,7 @@ export const Header: React.FC<HeaderProps> = ({
           }
 
           .header-trust-badges {
-            display: flex;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-            width: 100%;
-            order: 3;
-            margin-left: 0;
-            border-left: none;
-            padding: 8px 4px 2px;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-            gap: 16px;
-            justify-content: space-between;
-          }
-
-          .header-trust-badges::-webkit-scrollbar {
             display: none;
-          }
-
-          .header-trust-badge {
-            gap: 6px;
-            flex-shrink: 0;
-            align-items: baseline;
-          }
-
-          .badge-icon {
-            align-self: center;
-            display: inline-flex;
-            vertical-align: middle;
-          }
-
-          .badge-title {
-            font-size: clamp(0.6rem, 2.2vw, 0.72rem);
-            white-space: nowrap;
-            opacity: 0.9;
           }
         }
 
@@ -456,10 +419,25 @@ export const Header: React.FC<HeaderProps> = ({
           top: 100%;
           left: 0;
           width: 100%;
-          background: rgba(11, 30, 45, 0.95);
-          backdrop-filter: blur(20px);
+          background: rgba(11, 30, 45, 0.97);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          padding: 0 24px;
+          max-height: 0;
+          opacity: 0;
+          overflow: hidden;
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          border-bottom: 0 solid rgba(255, 255, 255, 0.15);
+          pointer-events: none;
+          z-index: 99;
+        }
+
+        .mobile-menu-overlay.open {
           padding: 24px;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+          max-height: 320px;
+          opacity: 1;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+          pointer-events: auto;
         }
 
         .mobile-menu-content {
@@ -474,6 +452,11 @@ export const Header: React.FC<HeaderProps> = ({
           font-size: 1.2rem;
           color: var(--oddshoe-white);
           text-align: left;
+          transition: color var(--transition-fast);
+        }
+
+        .mobile-link:active {
+          color: var(--oddshoe-amber);
         }
       `}</style>
     </header>

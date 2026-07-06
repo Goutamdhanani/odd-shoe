@@ -15,7 +15,6 @@ export const Hero: React.FC<HeroProps> = ({
   onAddToCart
 }) => {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const currentSlide = HERO_SLIDES[currentSlideIndex];
   const trendingProduct = PRODUCTS_CATALOG[0]; // Green m123
 
   const handlePrev = () => {
@@ -28,26 +27,52 @@ export const Hero: React.FC<HeroProps> = ({
 
   const [touchStartX, setTouchStartX] = useState(0);
   const [touchStartY, setTouchStartY] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [touchStartTime, setTouchStartTime] = useState(0);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStartX(e.targetTouches[0].clientX);
     setTouchStartY(e.targetTouches[0].clientY);
+    setTouchStartTime(Date.now());
+    setIsDragging(true);
+    setDragOffset(0);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging) return;
+    const currentX = e.targetTouches[0].clientX;
+    const currentY = e.targetTouches[0].clientY;
+    const diffX = currentX - touchStartX;
+    const diffY = currentY - touchStartY;
+
+    // Only swipe if horizontal drag is dominant
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+      // Prevent default scrolling on horizontal swipe
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+      setDragOffset(diffX);
+    }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
+    if (!isDragging) return;
+    setIsDragging(false);
     
-    const diffX = touchStartX - touchEndX;
-    const diffY = touchStartY - touchEndY;
+    const touchEndX = e.changedTouches[0].clientX;
+    const duration = Date.now() - touchStartTime;
+    const diffX = touchEndX - touchStartX;
+    const velocity = diffX / duration;
 
-    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
-      if (diffX > 0) {
-        handleNext();
-      } else {
-        handlePrev();
-      }
+    // Snapping thresholds: 80px displacement or high velocity swipe
+    if (diffX < -80 || velocity < -0.4) {
+      handleNext();
+    } else if (diffX > 80 || velocity > 0.4) {
+      handlePrev();
     }
+    
+    setDragOffset(0);
   };
 
   return (
@@ -55,56 +80,92 @@ export const Hero: React.FC<HeroProps> = ({
       id="hero" 
       className="oddshoe-hero"
       onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      style={{ touchAction: 'pan-y' }}
     >
       {/* Soft Radial Ambient Glow */}
       <div className="hero-radial-glow animate-glow" />
 
       {/* Massive Edge-to-Edge Display Typography ("ODD SHOE") */}
       <div className="hero-typography-backdrop">
-        <h1 className="display-hero-text">
-          {currentSlide.heroText || 'ODD SHOE'}
-        </h1>
-      </div>
-
-      {/* Floating 3D Sneaker Hero Shot */}
-      <div className="hero-shoe-stage">
-        <img 
-          src={currentSlide.image} 
-          alt={currentSlide.name} 
-          className="hero-shoe-image animate-float"
-          key={currentSlide.id}
-          onClick={() => onSelectProduct(currentSlide)}
-        />
-        <div className="hero-shoe-shadow" />
-      </div>
-
-      {/* Hero Content Left: Tagline & CTA */}
-      <div className="hero-content-left">
-        <div className="hero-badge">
-          <Sparkles size={14} className="badge-sparkle" />
-          <span>NEW DROP 2026</span>
-        </div>
-        <h2 className="hero-tagline">{currentSlide.subtitle}</h2>
-        <p className="hero-description">
-          {currentSlide.description}
-        </p>
-
-        <div className="hero-cta-group">
-          <button className="primary-explore-btn" onClick={onExploreClick}>
-            <span>Explore</span>
-            <ArrowUpRight size={18} className="cta-arrow" />
-          </button>
+        <div 
+          className="hero-typography-track"
+          style={{
+            transform: `translateX(calc(-${currentSlideIndex * 100}% + ${dragOffset * 0.3}px))`,
+            transition: isDragging ? 'none' : 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
+        >
+          {HERO_SLIDES.map((slide) => (
+            <div key={`typo-${slide.id}`} className="hero-typography-slide-item">
+              <h1 className="display-hero-text">
+                {slide.heroText || 'ODD SHOE'}
+              </h1>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Hero Controls: Pagination (01/05) */}
+      {/* Floating 3D Sneaker Hero Shot Slider */}
+      <div className="hero-shoe-slider-container">
+        <div 
+          className="hero-shoe-slider-track"
+          style={{
+            transform: `translateX(calc(-${currentSlideIndex * 100}% + ${dragOffset}px))`,
+            transition: isDragging ? 'none' : 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
+        >
+          {HERO_SLIDES.map((slide) => (
+            <div key={`shoe-stage-${slide.id}`} className="hero-shoe-slide-item">
+              <div className="hero-shoe-stage-inner">
+                <img 
+                  src={slide.image} 
+                  alt={slide.name} 
+                  className="hero-shoe-image animate-float"
+                  onClick={() => onSelectProduct(slide)}
+                />
+                <div className="hero-shoe-shadow" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Hero Content Left: Tagline & CTA Slider */}
+      <div className="hero-content-slider-container">
+        <div 
+          className="hero-content-slider-track"
+          style={{
+            transform: `translateX(calc(-${currentSlideIndex * 100}% + ${dragOffset * 0.7}px))`,
+            transition: isDragging ? 'none' : 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)'
+          }}
+        >
+          {HERO_SLIDES.map((slide) => (
+            <div key={`content-${slide.id}`} className="hero-content-slide-item">
+              <div className="hero-badge">
+                <Sparkles size={14} className="badge-sparkle" />
+                <span>NEW DROP 2026</span>
+              </div>
+              <h2 className="hero-tagline">{slide.subtitle}</h2>
+              <p className="hero-description">{slide.description}</p>
+              <div className="hero-cta-group">
+                <button className="primary-explore-btn" onClick={onExploreClick}>
+                  <span>Explore</span>
+                  <ArrowUpRight size={18} className="cta-arrow" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Hero Controls: Pagination */}
       <div className="hero-carousel-controls">
         <button className="ctrl-arrow" onClick={handlePrev} aria-label="Previous Drop">
           <ChevronLeft size={20} />
         </button>
         <span className="slide-counter">
-          0{currentSlideIndex + 1}/0{HERO_SLIDES.length + 2}
+          0{currentSlideIndex + 1}/0{HERO_SLIDES.length}
         </span>
         <button className="ctrl-arrow" onClick={handleNext} aria-label="Next Drop">
           <ChevronRight size={20} />
@@ -139,6 +200,7 @@ export const Hero: React.FC<HeroProps> = ({
           align-items: center;
           justify-content: space-between;
           overflow: hidden;
+          touch-action: pan-y;
         }
 
         .hero-radial-glow {
@@ -160,9 +222,21 @@ export const Hero: React.FC<HeroProps> = ({
           left: 50%;
           transform: translate(-50%, -50%);
           width: 100%;
-          text-align: center;
           z-index: 2;
           pointer-events: none;
+          overflow: hidden;
+        }
+
+        .hero-typography-track {
+          display: flex;
+          width: 100%;
+          will-change: transform;
+        }
+
+        .hero-typography-slide-item {
+          width: 100%;
+          flex-shrink: 0;
+          text-align: center;
         }
 
         .hero-typography-backdrop .display-hero-text {
@@ -172,8 +246,8 @@ export const Hero: React.FC<HeroProps> = ({
           white-space: nowrap;
         }
 
-        /* 3D Floating Shoe Stage */
-        .hero-shoe-stage {
+        /* 3D Floating Shoe Stage Slider */
+        .hero-shoe-slider-container {
           position: absolute;
           top: 35%;
           left: 50%;
@@ -181,6 +255,27 @@ export const Hero: React.FC<HeroProps> = ({
           z-index: 4;
           width: 580px;
           max-width: 90vw;
+          overflow: visible;
+          pointer-events: auto;
+        }
+
+        .hero-shoe-slider-track {
+          display: flex;
+          width: 100%;
+          will-change: transform;
+        }
+
+        .hero-shoe-slide-item {
+          width: 100%;
+          flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+
+        .hero-shoe-stage-inner {
+          position: relative;
+          width: 100%;
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -194,7 +289,7 @@ export const Hero: React.FC<HeroProps> = ({
           transition: transform var(--transition-spring);
         }
 
-        .hero-shoe-stage:hover .hero-shoe-image {
+        .hero-shoe-stage-inner:hover .hero-shoe-image {
           transform: scale(1.06) translateY(-10px) rotate(-3deg);
         }
 
@@ -207,12 +302,27 @@ export const Hero: React.FC<HeroProps> = ({
           filter: blur(8px);
         }
 
-        /* Left Side Tagline & Action */
-        .hero-content-left {
+        /* Left Side Tagline & Action Slider */
+        .hero-content-slider-container {
           position: relative;
           z-index: 5;
           max-width: 440px;
           margin-top: 180px;
+          overflow: hidden;
+          width: 100%;
+        }
+
+        .hero-content-slider-track {
+          display: flex;
+          width: 100%;
+          will-change: transform;
+        }
+
+        .hero-content-slide-item {
+          width: 100%;
+          flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
         }
 
         .hero-badge {
@@ -231,6 +341,7 @@ export const Hero: React.FC<HeroProps> = ({
           color: var(--oddshoe-navy-900);
           margin-bottom: 12px;
           box-shadow: var(--glass-shadow);
+          align-self: flex-start;
         }
 
         .badge-sparkle {
@@ -424,9 +535,17 @@ export const Hero: React.FC<HeroProps> = ({
             text-align: center;
             padding-bottom: 120px;
           }
-          .hero-content-left {
+          .hero-content-slider-container {
             margin-top: 360px;
             align-items: center;
+            max-width: 100%;
+          }
+          .hero-content-slide-item {
+            align-items: center;
+            text-align: center;
+          }
+          .hero-badge {
+            align-self: center;
           }
           .hero-cta-group {
             justify-content: center;
@@ -434,7 +553,7 @@ export const Hero: React.FC<HeroProps> = ({
           .trending-arrivals-card {
             margin-top: 20px;
           }
-          .hero-shoe-stage {
+          .hero-shoe-slider-container {
             top: 25%;
             width: 420px;
           }
@@ -442,7 +561,7 @@ export const Hero: React.FC<HeroProps> = ({
 
         @media (max-width: 768px) {
           .oddshoe-hero {
-            padding: 16px 16px 80px; /* Reduced vertical & side padding */
+            padding: 16px 16px 80px;
           }
 
           .hero-radial-glow {
@@ -451,46 +570,45 @@ export const Hero: React.FC<HeroProps> = ({
           }
 
           .hero-typography-backdrop {
-            top: 24%; /* Center aligned with shoe stage */
+            top: 24%;
           }
 
           .hero-typography-backdrop .display-hero-text {
             font-size: clamp(3rem, 15vw, 5.5rem);
-            color: rgba(255, 255, 255, 0.45); /* Soft background text, zero competition */
+            color: rgba(255, 255, 255, 0.45);
             text-shadow: 0 10px 20px rgba(11, 30, 45, 0.05);
           }
 
-          .hero-shoe-stage {
+          .hero-shoe-slider-container {
             width: 300px;
-            top: 24%; /* Optical centering & vertical balance */
+            top: 24%;
           }
 
-          .hero-content-left {
-            margin-top: 224px; /* Compressed layout by ~20% (8px system) */
+          .hero-content-slider-container {
+            margin-top: 224px;
             padding: 0 16px;
-            align-items: center;
           }
 
           .hero-badge {
-            margin-bottom: 8px; /* 8px system margin */
+            margin-bottom: 8px;
           }
 
           .hero-tagline {
             font-size: 1.8rem;
-            line-height: 1.2; /* Better line height */
-            letter-spacing: -0.01em; /* Better letter spacing */
-            max-width: 290px; /* Narrower width for optimal balance */
-            margin-bottom: 8px; /* 8px system margin */
+            line-height: 1.2;
+            letter-spacing: -0.01em;
+            max-width: 290px;
+            margin-bottom: 8px;
           }
 
           .hero-description {
             font-size: 0.85rem;
-            max-width: 320px; /* Narrower width */
-            line-height: 1.55; /* Better line height */
+            max-width: 320px;
+            line-height: 1.55;
             color: var(--oddshoe-navy-900);
-            opacity: 0.7; /* Softer text color */
+            opacity: 0.7;
             margin-top: 8px;
-            margin-bottom: 24px; /* 8px system margin */
+            margin-bottom: 24px;
           }
 
           .primary-explore-btn {
@@ -498,22 +616,22 @@ export const Hero: React.FC<HeroProps> = ({
           }
 
           .primary-explore-btn:active {
-            transform: scale(0.96) translateY(0); /* Better pressed state */
+            transform: scale(0.96) translateY(0);
             background: rgba(255, 255, 255, 0.6);
           }
 
           .hero-carousel-controls {
-            bottom: 24px; /* 8px system spacing */
+            bottom: 24px;
             padding: 6px 16px;
           }
 
           .ctrl-arrow {
             min-width: 44px;
-            min-height: 44px; /* 44px touch target compliance */
+            min-height: 44px;
           }
 
           .trending-arrivals-card {
-            margin-top: 24px; /* 8px system spacing */
+            margin-top: 24px;
           }
         }
       `}</style>
