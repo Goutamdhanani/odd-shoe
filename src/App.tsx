@@ -13,8 +13,13 @@ import { NotificationToast } from './components/NotificationToast';
 import { Footer } from './components/Footer';
 import { PRODUCTS_CATALOG } from './data/products';
 import { Product, CartItem } from './types';
+import { Customizer } from './components/Customizer';
 
 export const App: React.FC = () => {
+  const [view, setView] = useState<'store' | 'customizer'>(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('customizer') === 'true' ? 'customizer' : 'store';
+  });
   const [products] = useState<Product[]>(PRODUCTS_CATALOG);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [wishlistIds, setWishlistIds] = useState<string[]>(['prod-1']);
@@ -93,37 +98,55 @@ export const App: React.FC = () => {
 
   return (
     <div className="oddshoe-page-wrapper">
-      {/* Main Sticky Header */}
-      <Header
-        cartCount={cartCount}
-        onOpenCart={() => setIsCartOpen(true)}
-        onOpenSearch={() => setIsSearchOpen(true)}
-        onNavigateSection={handleNavigateSection}
-        wishlistCount={wishlistIds.length}
-        onOpenWishlist={() => setIsWishlistOpen(true)}
-      />
+      {view === 'customizer' ? (
+        <Customizer
+          onClose={() => setView('store')}
+          onAddToCart={handleAddToCart}
+        />
+      ) : (
+        <>
+          {/* Main Sticky Header */}
+          <Header
+            cartCount={cartCount}
+            onOpenCart={() => setIsCartOpen(true)}
+            onOpenSearch={() => setIsSearchOpen(true)}
+            onNavigateSection={handleNavigateSection}
+            wishlistCount={wishlistIds.length}
+            onOpenWishlist={() => setIsWishlistOpen(true)}
+            onStartCustomizing={() => {
+              setView('customizer');
+              window.scrollTo({ top: 0 });
+            }}
+          />
 
-      {/* Hero Section with "ODD SHOE" Oversized Display Type & Floating 3D Render */}
-      <Hero
-        onExploreClick={() => handleNavigateSection('products')}
-        onSelectProduct={(p) => setSelectedProduct(p)}
-        onAddToCart={(p) => handleAddToCart(p)}
-      />
+          {/* Hero Section with "ODD SHOE" Oversized Display Type & Floating 3D Render */}
+          <Hero
+            onExploreClick={() => handleNavigateSection('products')}
+            onSelectProduct={(p) => setSelectedProduct(p)}
+            onAddToCart={(p) => handleAddToCart(p)}
+          />
 
-      {/* Products Grid Section */}
-      <ProductGrid
-        products={products}
-        onSelectProduct={(p) => setSelectedProduct(p)}
-        onAddToCart={(p) => handleAddToCart(p)}
-        onToggleWishlist={handleToggleWishlist}
-        wishlistIds={wishlistIds}
-      />
+          {/* Products Grid Section */}
+          <ProductGrid
+            products={products}
+            onSelectProduct={(p) => setSelectedProduct(p)}
+            onAddToCart={(p) => handleAddToCart(p)}
+            onToggleWishlist={handleToggleWishlist}
+            wishlistIds={wishlistIds}
+          />
 
-      {/* Product Quality Section */}
-      <ProductQuality />
+          {/* Product Quality Section */}
+          <ProductQuality
+            onStartCustomizing={() => {
+              setView('customizer');
+              window.scrollTo({ top: 0 });
+            }}
+          />
 
-      {/* Footer Section */}
-      <Footer />
+          {/* Footer Section */}
+          <Footer />
+        </>
+      )}
 
       {/* Modals & Drawers */}
       <ProductDetailModal
