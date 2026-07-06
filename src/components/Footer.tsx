@@ -16,11 +16,6 @@ export const Footer: React.FC = () => {
       <div className="footer-inner">
         <div className="footer-brand-col">
           <div className="brand-lockup">
-            <svg viewBox="0 0 40 40" className="brand-icon">
-              <rect width="40" height="40" rx="10" fill="#0B1E2D" />
-              <path d="M12 26 C16 12, 24 12, 28 26 C24 30, 16 30, 12 26 Z" fill="#7FC8E8" />
-              <circle cx="18" cy="20" r="2.5" fill="#F5A63B" />
-            </svg>
             <span className="brand-wordmark">
               <span className="brand-odd">ODD</span>
               <span className="brand-shoe">SHOE</span>
