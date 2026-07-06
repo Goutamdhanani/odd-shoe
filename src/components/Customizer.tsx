@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   RotateCcw, Save, Share2, Heart, ShoppingCart, Award, Sparkles, 
   Upload, X, ChevronLeft, ChevronRight, Sliders, Plus, Minus, Info, 
-  Truck, Copy, Check, Printer, Download, RefreshCw, FileText 
+  Truck, Copy, Check, Printer, Download, RefreshCw, FileText, Camera
 } from 'lucide-react';
-import { ShoeSVG } from './ShoeSVG';
+import { ShoePreviewStage } from './ShoePreviewStage';
 import { Product } from '../types';
 import confetti from 'canvas-confetti';
 
@@ -164,11 +164,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
   const [selectedPart, setSelectedPart] = useState('upper');
 
   // Preview Control States
-  const [angle, setAngle] = useState<'side' | 'top' | 'back' | 'sole'>('side');
-  const [zoom, setZoom] = useState(1);
-  const [rotationY, setRotationY] = useState(0);
-  const isDragging = useRef(false);
-  const startX = useRef(0);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Smart suggestions matching combinations
   const [colorSuggestions, setColorSuggestions] = useState<string[][]>([]);
@@ -353,37 +349,75 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
     }, 3200);
   };
 
-  // Interactive rotation mouse/touch handlers
-  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
-    isDragging.current = true;
-    startX.current = 'touches' in e ? e.touches[0].clientX : e.clientX;
-  };
-
-  const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDragging.current) return;
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const deltaX = clientX - startX.current;
+  // High-Resolution Background-Removed Image Generator (Fully Local & Fast)
+  const handleGenerateHDImage = async () => {
+    const svgEl = document.querySelector('.shoe-svg-viewport svg');
+    if (!svgEl) return;
     
-    // Rotate Y smoothly
-    const nextRot = rotationY + deltaX * 0.45;
-    setRotationY(nextRot);
-    startX.current = clientX;
+    setIsGenerating(true);
+    triggerToast('Generating studio render (removing background)...');
 
-    // Simulated camera angle change based on degree range
-    const normalizedRot = ((nextRot % 360) + 360) % 360;
-    if (normalizedRot > 45 && normalizedRot <= 135) {
-      setAngle('back');
-    } else if (normalizedRot > 135 && normalizedRot <= 225) {
-      setAngle('sole');
-    } else if (normalizedRot > 225 && normalizedRot <= 315) {
-      setAngle('top');
-    } else {
-      setAngle('side');
+    try {
+      // 1. Serialize SVG elements
+      const serializer = new XMLSerializer();
+      let svgStr = serializer.serializeToString(svgEl);
+
+      // 2. Load into image object
+      const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(svgBlob);
+      
+      const img = new Image();
+      img.src = url;
+      
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+
+      // 3. Draw onto a high-definition canvas (1200x768)
+      const canvas = document.createElement('canvas');
+      canvas.width = 1200;
+      canvas.height = 768;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Failed to instantiate 2D canvas context');
+      
+      // Paint white background so U2-Net can isolate correctly
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, 1200, 768);
+      ctx.drawImage(img, 150, 84, 900, 600); // center the shoe
+      
+      const pngData = canvas.toDataURL('image/png');
+      URL.revokeObjectURL(url);
+
+      // 4. POST base64 image data to the local Vite connect middleware
+      const response = await fetch('/api/remove-bg', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: pngData })
+      });
+
+      if (!response.ok) {
+        throw new Error('Background isolation model failed');
+      }
+
+      const result = await response.json();
+
+      // 5. Download the clean, isolated PNG
+      const link = document.createElement('a');
+      link.href = result.image;
+      link.download = `${designTitle.replace(/\s+/g, '_')}_studio_render.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      triggerToast('Premium background-removed image downloaded!');
+      confetti({ particleCount: 100, spread: 60, origin: { y: 0.8 } });
+    } catch (err: any) {
+      console.error(err);
+      triggerToast('Error: ' + err.message);
+    } finally {
+      setIsGenerating(false);
     }
-  };
-
-  const handleDragEnd = () => {
-    isDragging.current = false;
   };
 
   // Share link generator
@@ -507,6 +541,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         </div>
 
         <div className="header-actions">
+          <button className="icon-header-btn hd-render-btn" onClick={handleGenerateHDImage} disabled={isGenerating} title="Generate Photo (No Background)">
+            <Camera size={18} className={isGenerating ? "animate-spin" : ""} />
+            <span className="desktop-only">{isGenerating ? "Generating..." : "Studio Render"}</span>
+          </button>
           <button className="icon-header-btn" onClick={() => setShowCertificate(true)} title="View Authenticity Certificate">
             <Award size={18} />
             <span className="desktop-only">Certificate</span>
@@ -536,66 +574,18 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
             </div>
           </div>
 
-          {/* Interactive Drag Stage */}
-          <div 
-            className="interactive-drag-container"
-            onMouseDown={handleDragStart}
-            onMouseMove={handleDragMove}
-            onMouseUp={handleDragEnd}
-            onMouseLeave={handleDragEnd}
-            onTouchStart={handleDragStart}
-            onTouchMove={handleDragMove}
-            onTouchEnd={handleDragEnd}
-          >
-            <div className="shoe-ambient-lighting" />
-            
-            {/* Embedded Zoomable Shoe SVG */}
-            <div className="svg-wrapper" style={{ transform: `scale(${zoom})` }}>
-              <ShoeSVG 
-                baseModel={baseModel} 
-                colors={colors}
-                laces={laces}
-                soleType={soleType}
-                material={material}
-                logo={logo}
-                accessories={accessories}
-                angle={angle}
-                zoom={1.0}
-                rotationY={rotationY}
-                onLogoPositionChange={(pos) => setLogo(prev => ({ ...prev, position: pos }))}
-              />
-            </div>
-
-            {/* Instruction tooltip */}
-            <div className="drag-hint">
-              <span>Drag horizontally to rotate shoe 360°</span>
-            </div>
-          </div>
-
-          {/* Camera Angles / Viewing Options */}
-          <div className="camera-nav-bar">
-            {(['side', 'top', 'back', 'sole'] as const).map((vAngle) => (
-              <button 
-                key={vAngle}
-                className={`camera-angle-tab ${angle === vAngle ? 'active' : ''}`}
-                onClick={() => {
-                  setAngle(vAngle);
-                  // Set base rotation based on angle selected
-                  if (vAngle === 'side') setRotationY(0);
-                  if (vAngle === 'back') setRotationY(90);
-                  if (vAngle === 'sole') setRotationY(180);
-                  if (vAngle === 'top') setRotationY(270);
-                }}
-              >
-                {vAngle.toUpperCase()}
-              </button>
-            ))}
-
-            <div className="zoom-controls">
-              <button className="zoom-btn" onClick={() => setZoom(z => Math.max(0.7, z - 0.1))}><Minus size={16} /></button>
-              <span className="zoom-val">{Math.round(zoom * 100)}%</span>
-              <button className="zoom-btn" onClick={() => setZoom(z => Math.min(1.5, z + 0.1))}><Plus size={16} /></button>
-            </div>
+          {/* Optimized Interactive Drag & Preview Stage */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+            <ShoePreviewStage
+              baseModel={baseModel}
+              colors={colors}
+              laces={laces}
+              soleType={soleType}
+              material={material}
+              logo={logo}
+              accessories={accessories}
+              onLogoPositionChange={(pos) => setLogo(prev => ({ ...prev, position: pos }))}
+            />
           </div>
 
           {/* Quick Presets Bar */}
