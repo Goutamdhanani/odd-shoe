@@ -404,6 +404,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           color: rgba(11, 30, 45, 0.6);
           margin-top: 10px;
         }
+
+        @media (max-width: 480px) {
+          .cart-drawer-panel {
+            padding: 16px;
+          }
+          .empty-icon-box {
+            width: 60px;
+            height: 60px;
+          }
+          .checkout-cta-btn {
+            padding: 12px;
+            font-size: 0.9rem;
+          }
+        }
       `}</style>
     </div>
   );

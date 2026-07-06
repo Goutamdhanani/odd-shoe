@@ -268,6 +268,55 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           transform: scale(1.08);
           box-shadow: 0 4px 14px rgba(245, 166, 59, 0.4);
         }
+
+        @media (max-width: 640px) {
+          .oddshoe-product-card {
+            padding: 10px;
+            border-radius: 14px;
+          }
+          .card-image-stage {
+            height: 120px;
+            margin-top: 5px;
+          }
+          .card-shoe-img {
+            max-height: 90px;
+          }
+          .card-product-title {
+            font-size: 0.85rem;
+          }
+          .card-product-sub {
+            font-size: 0.7rem;
+            margin-bottom: 8px;
+          }
+          .price-val {
+            font-size: 0.85rem;
+          }
+          .add-to-bag-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+          }
+          .card-wishlist-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            top: 8px;
+            right: 8px;
+          }
+          .card-wishlist-btn svg {
+            width: 14px;
+            height: 14px;
+          }
+          .card-tag {
+            font-size: 0.58rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+          }
+          .card-badge-container {
+            top: 8px;
+            left: 8px;
+          }
+        }
       `}</style>
     </div>
   );

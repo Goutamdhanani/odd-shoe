@@ -91,9 +91,6 @@ export const App: React.FC = () => {
 
   return (
     <div className="oddshoe-page-wrapper">
-      {/* Top Trust-badge Strip */}
-      <TrustStrip variant="top" />
-
       {/* Main Sticky Header */}
       <Header
         cartCount={cartCount}

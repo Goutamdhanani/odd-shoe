@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ShoppingBag, Search, Menu, X, ChevronDown, Heart } from 'lucide-react';
+import { ShoppingBag, Search, Menu, X, ChevronDown, Heart, Package, RotateCcw, Headphones } from 'lucide-react';
+import { TRUST_ITEMS } from '../data/products';
 
 interface HeaderProps {
   cartCount: number;
@@ -19,6 +20,19 @@ export const Header: React.FC<HeaderProps> = ({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsDropdown, setProductsDropdown] = useState(false);
 
+  const getIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'Package':
+        return <Package size={14} strokeWidth={2} />;
+      case 'RotateCcw':
+        return <RotateCcw size={14} strokeWidth={2} />;
+      case 'Headphones':
+        return <Headphones size={14} strokeWidth={2} />;
+      default:
+        return <Package size={14} strokeWidth={2} />;
+    }
+  };
+
   return (
     <header className="oddshoe-header">
       <div className="header-inner">
@@ -36,6 +50,16 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="brand-shoe">SHOE</span>
           </span>
         </a>
+
+        {/* Small Trust Badges */}
+        <div className="header-trust-badges">
+          {TRUST_ITEMS.map((item) => (
+            <div key={item.id} className="header-trust-badge">
+              <span className="badge-icon">{getIcon(item.iconName)}</span>
+              <span className="badge-title">{item.title}</span>
+            </div>
+          ))}
+        </div>
 
         {/* Desktop Navigation */}
         <nav className="desktop-nav">
@@ -283,6 +307,49 @@ export const Header: React.FC<HeaderProps> = ({
           padding: 6px;
         }
 
+        .header-trust-badges {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          margin-left: 20px;
+          border-left: 1px solid rgba(11, 30, 45, 0.15);
+          padding-left: 20px;
+        }
+
+        .header-trust-badge {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          color: var(--oddshoe-navy-900);
+        }
+
+        .badge-icon {
+          display: flex;
+          align-items: center;
+          color: var(--oddshoe-navy-900);
+          opacity: 0.8;
+        }
+
+        .badge-title {
+          font-family: var(--font-body);
+          font-weight: 600;
+          font-size: 0.72rem;
+          letter-spacing: 0.02em;
+          opacity: 0.85;
+          white-space: nowrap;
+        }
+
+        @media (max-width: 1100px) {
+          .header-trust-badges {
+            gap: 10px;
+            margin-left: 12px;
+            padding-left: 12px;
+          }
+          .badge-title {
+            font-size: 0.65rem;
+          }
+        }
+
         @media (max-width: 880px) {
           .desktop-nav {
             display: none;
@@ -290,6 +357,33 @@ export const Header: React.FC<HeaderProps> = ({
 
           .mobile-toggle-btn {
             display: flex;
+          }
+
+          .header-inner {
+            flex-wrap: wrap;
+            row-gap: 8px;
+          }
+
+          .header-trust-badges {
+            display: flex;
+            width: 100%;
+            order: 3;
+            margin-left: 0;
+            border-left: none;
+            padding-left: 0;
+            justify-content: center;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            padding-top: 8px;
+            gap: 12px;
+          }
+
+          .header-trust-badge {
+            gap: 4px;
+          }
+
+          .badge-title {
+            font-size: 0.62rem;
+            opacity: 0.9;
           }
         }
 

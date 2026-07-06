@@ -205,6 +205,35 @@ export const ProductQuality: React.FC<ProductQualityProps> = () => {
           gap: 8px;
           box-shadow: var(--shadow-md);
         }
+
+        @media (max-width: 480px) {
+          .quality-circle-backdrop {
+            width: 280px;
+            height: 280px;
+          }
+          .quality-shoe-img {
+            max-width: 320px;
+          }
+          .spec-chip {
+            right: 5%;
+            bottom: 10px;
+            font-size: 0.72rem;
+          }
+          .oddshoe-quality-section {
+            padding: 0 16px;
+            margin: 40px auto 20px;
+          }
+          .quality-feature-card {
+            padding: 14px;
+            gap: 12px;
+          }
+          .feat-title {
+            font-size: 0.95rem;
+          }
+          .feat-desc {
+            font-size: 0.78rem;
+          }
+        }
       `}</style>
     </section>
   );
