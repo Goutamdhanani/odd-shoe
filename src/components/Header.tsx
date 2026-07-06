@@ -9,7 +9,6 @@ interface HeaderProps {
   onNavigateSection: (sectionId: string) => void;
   wishlistCount?: number;
   onOpenWishlist: () => void;
-  onStartCustomizing: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,8 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSearch,
   onNavigateSection,
   wishlistCount = 0,
-  onOpenWishlist,
-  onStartCustomizing
+  onOpenWishlist
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsDropdown, setProductsDropdown] = useState(false);
@@ -94,10 +92,6 @@ export const Header: React.FC<HeaderProps> = ({
             QUALITY
           </button>
 
-          <button className="nav-link custom-lab-nav" onClick={onStartCustomizing}>
-            CUSTOM LAB
-          </button>
-
           <button className="nav-link" onClick={() => onNavigateSection('footer')}>
             ABOUT
           </button>
@@ -135,7 +129,6 @@ export const Header: React.FC<HeaderProps> = ({
           <button className="mobile-link" onClick={() => { onNavigateSection('hero'); setMobileMenuOpen(false); }}>HOME</button>
           <button className="mobile-link" onClick={() => { onNavigateSection('products'); setMobileMenuOpen(false); }}>OUR PRODUCTS</button>
           <button className="mobile-link" onClick={() => { onNavigateSection('quality'); setMobileMenuOpen(false); }}>QUALITY</button>
-          <button className="mobile-link mobile-custom-lab-nav" onClick={() => { onStartCustomizing(); setMobileMenuOpen(false); }}>CUSTOM LAB</button>
           <button className="mobile-link" onClick={() => { onNavigateSection('footer'); setMobileMenuOpen(false); }}>ABOUT</button>
         </div>
       </div>
