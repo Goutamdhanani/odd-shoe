@@ -19,13 +19,11 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onRemoveItem,
   onOpenCheckout
 }) => {
-  if (!isOpen) return null;
-
   const totalAmount = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
   const formattedTotal = `Rs. ${totalAmount.toLocaleString('en-IN')}`;
 
   return (
-    <div className="cart-overlay" onClick={onClose}>
+    <div className={`cart-overlay ${isOpen ? 'open' : ''}`} onClick={onClose}>
       <div className="cart-drawer-panel" onClick={(e) => e.stopPropagation()}>
         {/* Drawer Header */}
         <div className="drawer-header">
@@ -132,11 +130,19 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           left: 0;
           width: 100vw;
           height: 100vh;
-          background: rgba(11, 30, 45, 0.55);
-          backdrop-filter: blur(10px);
+          background: rgba(11, 30, 45, 0);
+          backdrop-filter: blur(0px);
           z-index: 250;
           display: flex;
           justify-content: flex-end;
+          pointer-events: none;
+          transition: background 0.4s cubic-bezier(0.16, 1, 0.3, 1), backdrop-filter 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .cart-overlay.open {
+          background: rgba(11, 30, 45, 0.55);
+          backdrop-filter: blur(10px);
+          pointer-events: auto;
         }
 
         .cart-drawer-panel {
@@ -149,12 +155,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           display: flex;
           flex-direction: column;
           padding: 24px;
-          animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          transform: translateX(100%);
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        @keyframes slideInRight {
-          from { transform: translateX(100%); }
-          to { transform: translateX(0); }
+        .cart-overlay.open .cart-drawer-panel {
+          transform: translateX(0);
         }
 
         .drawer-header {

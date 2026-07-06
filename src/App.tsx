@@ -6,6 +6,7 @@ import { ProductGrid } from './components/ProductGrid';
 import { ProductQuality } from './components/ProductQuality';
 import { ProductDetailModal } from './components/ProductDetailModal';
 import { CartDrawer } from './components/CartDrawer';
+import { WishlistDrawer } from './components/WishlistDrawer';
 import { CheckoutModal } from './components/CheckoutModal';
 import { SearchModal } from './components/SearchModal';
 import { NotificationToast } from './components/NotificationToast';
@@ -21,6 +22,7 @@ export const App: React.FC = () => {
   // Modals state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'cart' | 'wishlist' } | null>(null);
@@ -98,6 +100,7 @@ export const App: React.FC = () => {
         onOpenSearch={() => setIsSearchOpen(true)}
         onNavigateSection={handleNavigateSection}
         wishlistCount={wishlistIds.length}
+        onOpenWishlist={() => setIsWishlistOpen(true)}
       />
 
       {/* Hero Section with "ODD SHOE" Oversized Display Type & Floating 3D Render */}
@@ -142,6 +145,15 @@ export const App: React.FC = () => {
           setIsCartOpen(false);
           setIsCheckoutOpen(true);
         }}
+      />
+
+      <WishlistDrawer
+        isOpen={isWishlistOpen}
+        onClose={() => setIsWishlistOpen(false)}
+        wishlistIds={wishlistIds}
+        products={products}
+        onRemoveItem={handleToggleWishlist}
+        onAddToCart={handleAddToCart}
       />
 
       <CheckoutModal

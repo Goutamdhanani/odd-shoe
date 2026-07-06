@@ -8,6 +8,7 @@ interface HeaderProps {
   onOpenSearch: () => void;
   onNavigateSection: (sectionId: string) => void;
   wishlistCount?: number;
+  onOpenWishlist: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -15,7 +16,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenCart,
   onOpenSearch,
   onNavigateSection,
-  wishlistCount = 0
+  wishlistCount = 0,
+  onOpenWishlist
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsDropdown, setProductsDropdown] = useState(false);
@@ -101,7 +103,7 @@ export const Header: React.FC<HeaderProps> = ({
             <Search size={20} strokeWidth={2} />
           </button>
 
-          <button className="action-btn wishlist-btn" aria-label="Wishlist">
+          <button className="action-btn wishlist-btn" onClick={onOpenWishlist} aria-label="Wishlist">
             <Heart size={20} strokeWidth={2} />
             {wishlistCount > 0 && <span className="action-badge">{wishlistCount}</span>}
           </button>
