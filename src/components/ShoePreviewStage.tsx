@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Minus, Plus } from 'lucide-react';
+import { Minus, Plus, RotateCw, Play, Pause, Eye, Sparkles, Move3D } from 'lucide-react';
 import * as THREE from 'three';
 
 interface ShoePreviewStageProps {
@@ -42,8 +42,10 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
   accessories,
   onLogoPositionChange
 }) => {
-  const [angle, setAngle] = useState<'side' | 'top' | 'back' | 'sole'>('side');
+  const [angle, setAngle] = useState<'side' | 'front' | 'top' | 'back' | 'sole' | 'orbit'>('side');
   const [zoom, setZoom] = useState(1);
+  const [isAutoRotate, setIsAutoRotate] = useState(true);
+  const [isSpinning, setIsSpinning] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -66,6 +68,11 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
 
   const lastInteractionTime = useRef(Date.now());
   const isIdle = useRef(true);
+
+  // Canvas texture cache keys to prevent redundant redrawing
+  const lastLogoCache = useRef('');
+  const lastTongueCache = useRef('');
+  const lastInsoleCache = useRef('');
 
   // Mesh & Materials References
   const meshesRef = useRef<{
@@ -272,8 +279,8 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
   const applySoleCurve = (geom: THREE.BufferGeometry) => {
     const pos = geom.attributes.position;
     for (let i = 0; i < pos.count; i++) {
-      const z = pos.getZ(i); // length
-      const y = pos.getY(i); // height
+      const z = pos.getZ(i);
+      const y = pos.getY(i);
       
       let lift = 0;
       if (z > 0) {
@@ -309,7 +316,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       curveSegments: 36
     });
 
-    geom.rotateX(-Math.PI / 2); // depth becomes Y height, shape Y becomes Z length
+    geom.rotateX(-Math.PI / 2);
     applySoleCurve(geom);
     return geom;
   };
@@ -324,9 +331,8 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
 
     for (let s = 0; s <= slices; s++) {
       const u = s / slices;
-      const z = -1.1 + 2.2 * u; // length
+      const z = -1.1 + 2.2 * u;
 
-      // Width profile
       let w = 0.22;
       if (u < 0.25) {
         w = 0.22 + 0.08 * (u / 0.25);
@@ -338,7 +344,6 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
         w = 0.33 * (1 - t * t) + 0.02;
       }
 
-      // Height profile based on base model type
       let h = 0.12;
       if (u < 0.25) {
         const t = u / 0.25;
@@ -351,7 +356,6 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
         h = hCollar * Math.pow(1 - t, 1.3) + 0.12;
       }
 
-      // Bottom sole height
       const soleY = z > 0 ? 0.12 * Math.pow(z / 1.15, 2) : 0.04 * Math.pow(z / 1.15, 2);
       const yBase = soleY + 0.14;
 
@@ -366,10 +370,9 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
         if (sin >= 0) {
           y += sin * h;
         } else {
-          y += sin * 0.02 * h; // flat bottom
+          y += sin * 0.02 * h;
         }
 
-        // Ankle Collar opening (throat cavity for tongue/laces)
         if (u > 0.2 && u < 0.65 && sin > 0) {
           const angleDiff = Math.abs(theta - Math.PI / 2);
           const factor = Math.max(0, 1 - angleDiff / (Math.PI / 2.5));
@@ -385,7 +388,6 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       }
     }
 
-    // Faces
     for (let s = 0; s < slices; s++) {
       for (let r = 0; r < radialSegments; r++) {
         const nextR = (r + 1) % radialSegments;
@@ -667,7 +669,6 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     return geom;
   };
 
-  // Helper to compute physical eyelet points dynamically
   const getEyeletPoints = () => {
     const eyeletsCount = 5;
     const leftEyelets: THREE.Vector3[] = [];
@@ -703,7 +704,6 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     const { leftEyelets, rightEyelets, eyeletsCount } = getEyeletPoints();
     const points: THREE.Vector3[] = [];
     
-    // Zigzag laces
     for (let i = 0; i < eyeletsCount; i++) {
       if (i % 2 === 0) {
         points.push(leftEyelets[i]);
@@ -714,7 +714,6 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       }
     }
 
-    // Add bow loops
     const topL = leftEyelets[eyeletsCount - 1];
     const topR = rightEyelets[eyeletsCount - 1];
     const center = new THREE.Vector3().addVectors(topL, topR).multiplyScalar(0.5).add(new THREE.Vector3(0, 0.06, 0.02));
@@ -723,14 +722,12 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     points.push(center);
     points.push(topL);
 
-    // Left bow loop
     const bowL1 = new THREE.Vector3(topL.x - 0.06, topL.y + 0.05, topL.z - 0.05);
     const bowL2 = new THREE.Vector3(topL.x - 0.12, topL.y + 0.02, topL.z - 0.08);
     points.push(bowL1);
     points.push(bowL2);
     points.push(center);
 
-    // Right bow loop
     const bowR1 = new THREE.Vector3(topR.x + 0.06, topR.y + 0.05, topR.z - 0.05);
     const bowR2 = new THREE.Vector3(topR.x + 0.12, topR.y + 0.02, topR.z - 0.08);
     points.push(bowR1);
@@ -740,28 +737,30 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     const curve = new THREE.CatmullRomCurve3(points);
     const thickness = laces.thickness === 'thick' ? 0.013 : laces.thickness === 'thin' ? 0.007 : 0.010;
     
-    const geom = new THREE.TubeGeometry(curve, 90, thickness, 8, false);
-    return geom;
+    return new THREE.TubeGeometry(curve, 90, thickness, 8, false);
   };
 
-  // 3. Update Textures & Canvas graphics dynamically
+  // 3. Optimized Texture Canvas Drawers (Memoized via cache keys)
   const drawLogoCanvas = () => {
     const textures = texturesRef.current;
     if (!textures.logoCanvas || !textures.logoTexture) return;
+
+    const key = `${logo.type}_${logo.value}_${colors.stitching || ''}`;
+    if (lastLogoCache.current === key && logo.type !== 'image') return;
 
     const ctx = textures.logoCanvas.getContext('2d');
     if (!ctx) return;
 
     ctx.clearRect(0, 0, 256, 256);
-
     const activeColor = colors.stitching || '#0B1E2D';
 
     if (logo.type === 'text') {
       ctx.fillStyle = activeColor;
-      ctx.font = '900 68px "Outfit", "Inter", sans-serif';
+      ctx.font = '900 68px "Syne", "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(logo.value || 'ODD', 128, 128);
+      lastLogoCache.current = key;
     } else if (logo.type === 'image') {
       if (logo.value.startsWith('data:') || logo.value.startsWith('http')) {
         const img = new Image();
@@ -773,7 +772,6 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
           textures.logoTexture!.needsUpdate = true;
         };
       } else {
-        // Default brand lightning bolt/wings swoosh
         ctx.fillStyle = activeColor;
         ctx.beginPath();
         ctx.moveTo(20, 160);
@@ -791,6 +789,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
         ctx.quadraticCurveTo(140, 185, 60, 175);
         ctx.closePath();
         ctx.fill();
+        lastLogoCache.current = key;
       }
     }
 
@@ -800,6 +799,9 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
   const drawTongueLabelCanvas = () => {
     const textures = texturesRef.current;
     if (!textures.tongueCanvas || !textures.tongueTexture) return;
+
+    const key = `${accessories.tongueLabel}_${colors.stitching || ''}`;
+    if (lastTongueCache.current === key) return;
 
     const ctx = textures.tongueCanvas.getContext('2d');
     if (!ctx) return;
@@ -813,18 +815,22 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
 
     if (accessories.tongueLabel) {
       ctx.fillStyle = '#1e293b';
-      ctx.font = 'bold 36px "Outfit", "Inter", sans-serif';
+      ctx.font = 'bold 36px "Syne", "Plus Jakarta Sans", sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(accessories.tongueLabel.toUpperCase().substring(0, 8), 128, 64);
     }
 
+    lastTongueCache.current = key;
     textures.tongueTexture.needsUpdate = true;
   };
 
   const drawInsoleCanvas = () => {
     const textures = texturesRef.current;
     if (!textures.insoleCanvas || !textures.insoleTexture) return;
+
+    const key = `${accessories.insoleText}_${colors.midsole || ''}_${colors.upper || ''}`;
+    if (lastInsoleCache.current === key) return;
 
     const ctx = textures.insoleCanvas.getContext('2d');
     if (!ctx) return;
@@ -833,7 +839,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     ctx.fillRect(0, 0, 128, 256);
 
     ctx.fillStyle = colors.upper || '#0f172a';
-    ctx.font = 'bold 16px "Outfit", "Inter", sans-serif';
+    ctx.font = 'bold 16px "Syne", "Plus Jakarta Sans", sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
@@ -843,6 +849,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     ctx.fillText(accessories.insoleText ? accessories.insoleText.substring(0, 15).toUpperCase() : 'ODDSHOE DESIGN', 0, 0);
     ctx.restore();
 
+    lastInsoleCache.current = key;
     textures.insoleTexture.needsUpdate = true;
   };
 
@@ -876,7 +883,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     cameraRef.current = camera;
 
     // D. LIGHTS
-    const ambientLight = new THREE.AmbientLight('#ffffff', 0.65);
+    const ambientLight = new THREE.AmbientLight('#ffffff', 0.7);
     scene.add(ambientLight);
 
     const dirLight1 = new THREE.DirectionalLight('#ffffff', 1.4);
@@ -893,7 +900,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     dirLight1.shadow.bias = -0.0005;
     scene.add(dirLight1);
 
-    const dirLight2 = new THREE.DirectionalLight('#e0f2fe', 0.5); 
+    const dirLight2 = new THREE.DirectionalLight('#e0f2fe', 0.6); 
     dirLight2.position.set(-2, -1, -2);
     scene.add(dirLight2);
 
@@ -935,7 +942,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
 
     const textures = getProceduralTextures();
 
-    // 4.1 Sole
+    // Sole
     const midsoleGeom = createSoleGeometry(0.14);
     const midsoleMat = new THREE.MeshStandardMaterial({
       color: colors.midsole || '#FFFFFF',
@@ -963,7 +970,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     shoeGroup.add(outsole);
     meshesRef.current.outsole = outsole;
 
-    // 4.2 Air Bubbles
+    // Air Bubbles
     const airGlassGeom = new THREE.CylinderGeometry(0.06, 0.06, 0.16, 16);
     airGlassGeom.rotateZ(Math.PI / 2); 
     const airGlassMat = new THREE.MeshPhysicalMaterial({
@@ -1007,7 +1014,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     bubbleGroupL.visible = hasBubble;
     bubbleGroupR.visible = hasBubble;
 
-    // 4.3 Upper Mesh
+    // Upper Mesh
     const upperGeom = getUpperGeometry();
     const upperMat = new THREE.MeshStandardMaterial({
       color: colors.upper || '#FFFFFF',
@@ -1023,7 +1030,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     shoeGroup.add(upper);
     meshesRef.current.upper = upper;
 
-    // 4.4 Toe Cap
+    // Toe Cap
     const toeCapGeom = getOverlayGeometry(0.72, 1.0, 1.008);
     const toeCapMat = new THREE.MeshStandardMaterial({
       color: colors.toeBox || '#FFFFFF',
@@ -1035,7 +1042,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     shoeGroup.add(toeCap);
     meshesRef.current.toeCap = toeCap;
 
-    // 4.5 Heel Counter
+    // Heel Counter
     const heelCounterGeom = getOverlayGeometry(0.0, 0.22, 1.01);
     const heelCounterMat = new THREE.MeshStandardMaterial({
       color: colors.heel || '#FFFFFF',
@@ -1047,7 +1054,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     shoeGroup.add(heelCounter);
     meshesRef.current.heelCounter = heelCounter;
 
-    // 4.6 Side Panels Overlay
+    // Side Panels Overlay
     const sidePanelGeomL = getSidePanelGeometry(false);
     const sidePanelGeomR = getSidePanelGeometry(true);
     const sidePanelMat = new THREE.MeshStandardMaterial({
@@ -1064,7 +1071,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     meshesRef.current.sidePanelL = sidePanelL;
     meshesRef.current.sidePanelR = sidePanelR;
 
-    // 4.7 Tongue
+    // Tongue
     const tongueGeom = getTongueGeometry();
     const tongueMat = new THREE.MeshStandardMaterial({
       color: colors.tongue || '#FFFFFF',
@@ -1076,7 +1083,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     shoeGroup.add(tongue);
     meshesRef.current.tongue = tongue;
 
-    // 4.8 Tongue Label
+    // Tongue Label
     const tongueLabelGeom = new THREE.PlaneGeometry(0.12, 0.065);
     drawTongueLabelCanvas();
     const tongueLabelMat = new THREE.MeshBasicMaterial({
@@ -1086,7 +1093,6 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     });
     const tongueLabel = new THREE.Mesh(tongueLabelGeom, tongueLabelMat);
     
-    // Resolve scope variables locally
     const zTongue = -0.15;
     const soleYTongue = zTongue > 0 ? 0.12 * Math.pow(zTongue / 1.15, 2) : 0.04 * Math.pow(zTongue / 1.15, 2);
     const yBaseTongue = soleYTongue + 0.14;
@@ -1098,7 +1104,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     meshesRef.current.tongueLabel = tongueLabel;
     tongueLabel.visible = !!accessories.tongueLabel;
 
-    // 4.9 Insole
+    // Insole
     const insoleGeom = new THREE.PlaneGeometry(0.35, 0.8);
     drawInsoleCanvas();
     const insoleMat = new THREE.MeshBasicMaterial({
@@ -1111,7 +1117,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     shoeGroup.add(insole);
     meshesRef.current.insole = insole;
 
-    // 4.10 Laces Tube
+    // Laces Tube
     const lacesGeom = getLacesGeometry();
     const lacesMat = new THREE.MeshStandardMaterial({
       color: laces.color || '#FFFFFF',
@@ -1122,7 +1128,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     shoeGroup.add(lacesMesh);
     meshesRef.current.laces = lacesMesh;
 
-    // 4.11 Repositionable Logo Badge
+    // Repositionable Logo Badge
     const logoBadgeGeom = new THREE.PlaneGeometry(0.18, 0.18);
     drawLogoCanvas();
     const logoBadgeMat = new THREE.MeshBasicMaterial({
@@ -1160,7 +1166,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     meshesRef.current.logoBadge = logoBadge;
     logoBadge.visible = logo.type !== 'none';
 
-    // 4.12 Heel Pull Tab
+    // Heel Pull Tab
     const pullTabPoints = [
       new THREE.Vector3(0, 0.3, -1.0),
       new THREE.Vector3(0, 0.5, -1.1),
@@ -1175,7 +1181,6 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     const pullTab = new THREE.Mesh(pullTabGeom, pullTabMat);
     pullTab.castShadow = true;
     
-    // Resolve scope variables locally
     const zHeel = -1.0;
     const soleYHeel = zHeel > 0 ? 0.12 * Math.pow(zHeel / 1.15, 2) : 0.04 * Math.pow(zHeel / 1.15, 2);
     const yBaseHeel = soleYHeel + 0.14;
@@ -1184,7 +1189,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     pullTab.position.set(0, yBaseHeel + hCollarBack - 0.35, 0.0);
     shoeGroup.add(pullTab);
 
-    // 4.13 Carbon Fiber Heel Plate
+    // Carbon Fiber Heel Plate
     const carbonHeelGeom = getOverlayGeometry(0.0, 0.15, 1.015);
     const zCarbon = -1.1;
     const soleYCarbon = zCarbon > 0 ? 0.12 * Math.pow(zCarbon / 1.15, 2) : 0.04 * Math.pow(zCarbon / 1.15, 2);
@@ -1209,7 +1214,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     meshesRef.current.carbonHeel = carbonHeel;
     carbonHeel.visible = accessories.carbonHeel;
 
-    // 4.14 Reflective Strip
+    // Reflective Strip
     const refStripGeom = new THREE.BoxGeometry(0.018, 0.25, 0.005);
     const refStripMat = new THREE.MeshStandardMaterial({
       color: '#e2e8f0',
@@ -1229,7 +1234,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     meshesRef.current.reflectiveStrip = reflectiveStrip;
     reflectiveStrip.visible = accessories.reflectiveStrips;
 
-    // 4.15 Eyelets Detail
+    // Eyelets Detail
     const { leftEyelets, rightEyelets, eyeletsCount } = getEyeletPoints();
 
     const eyelets = new THREE.Group();
@@ -1274,7 +1279,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     shoeGroup.add(eyelets);
     meshesRef.current.eyelets = eyelets;
 
-    // 4.16 Lace Tag Deubré
+    // Lace Tag Deubré
     const laceTagGeom = new THREE.BoxGeometry(0.08, 0.02, 0.015);
     const laceTagMat = new THREE.MeshStandardMaterial({
       color: '#cccccc',
@@ -1294,6 +1299,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     let animationFrameId: number;
     
     const render = () => {
+      // Smooth Damping Lerp
       rotationXRef.current += (targetRotationX.current - rotationXRef.current) * 0.12;
       rotationYRef.current += (targetRotationY.current - rotationYRef.current) * 0.12;
       
@@ -1301,15 +1307,18 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       shoeGroup.rotation.x = rotationXRef.current;
 
       const timeSinceLastInteract = Date.now() - lastInteractionTime.current;
-      if (timeSinceLastInteract > 5000) {
+      if (timeSinceLastInteract > 4000) {
         isIdle.current = true;
       }
 
-      if (isIdle.current && !isDragging.current && !isDraggingLogo.current) {
-        targetRotationY.current += 0.004; 
-        const floatOffset = Math.sin(Date.now() * 0.0018) * 0.022;
+      // Auto-rotation & floating motion
+      if ((isIdle.current || isAutoRotate) && !isDragging.current && !isDraggingLogo.current) {
+        if (isAutoRotate) {
+          targetRotationY.current += 0.005; 
+        }
+        const floatOffset = Math.sin(Date.now() * 0.002) * 0.025;
         shoeGroup.position.y = 0.05 + floatOffset;
-        shadowMesh.scale.setScalar(1 - floatOffset * 0.8);
+        shadowMesh.scale.setScalar(1 - floatOffset * 0.85);
       } else {
         shoeGroup.position.y = 0.05;
         shadowMesh.scale.setScalar(1);
@@ -1390,13 +1399,12 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     };
   }, [baseModel, soleType, laces.type, laces.thickness]); 
 
-  // Updates when material finishes or minor accessories change (fast updates, no geo rebuilds)
+  // Fast materials & accessories updates
   useEffect(() => {
     const meshes = meshesRef.current;
     const textures = texturesRef.current;
     if (!meshes.upper) return;
 
-    // Update colors
     if (meshes.midsole) {
       (meshes.midsole.material as THREE.MeshStandardMaterial).color.set(colors.midsole || '#FFFFFF');
     }
@@ -1417,7 +1425,6 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       coreMat.emissive.set(colors.airBubble || '#00E5FF');
     }
 
-    // Material textures & roughness
     const upperMat = meshes.upper.material as THREE.MeshStandardMaterial;
     upperMat.color.set(colors.upper || '#FFFFFF');
     upperMat.roughness = material === 'leather' ? 0.35 : material === 'suede' ? 0.9 : 0.6;
@@ -1463,7 +1470,6 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       tongueMat.needsUpdate = true;
     }
 
-    // Accessories
     if (meshes.reflectiveStrip) {
       meshes.reflectiveStrip.visible = accessories.reflectiveStrips;
     }
@@ -1481,7 +1487,6 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       drawInsoleCanvas();
     }
 
-    // Logo update & visibility
     if (meshes.logoBadge) {
       meshes.logoBadge.visible = logo.type !== 'none';
       drawLogoCanvas();
@@ -1505,12 +1510,10 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       meshes.logoBadge.scale.setScalar(logo.scale);
     }
 
-    // Laces color
     if (meshes.laces) {
       (meshes.laces.material as THREE.MeshStandardMaterial).color.set(laces.color || '#FFFFFF');
     }
 
-    // Eyelets metalness
     if (meshes.eyelets) {
       meshes.eyelets.traverse((node) => {
         if (node instanceof THREE.Mesh) {
@@ -1524,14 +1527,17 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
 
   }, [colors, laces.color, material, logo.type, logo.value, logo.position, logo.scale, accessories]);
 
-  // Handle Preset Angle changes from buttons
+  // Handle Preset Angle changes
   useEffect(() => {
     isIdle.current = false;
     lastInteractionTime.current = Date.now();
 
     if (angle === 'side') {
-      targetRotationY.current = 0.4; // Hero angled slightly
+      targetRotationY.current = 0.45;
       targetRotationX.current = 0.08;
+    } else if (angle === 'front') {
+      targetRotationY.current = -Math.PI / 2.2;
+      targetRotationX.current = 0.12;
     } else if (angle === 'top') {
       targetRotationY.current = 0.0;
       targetRotationX.current = Math.PI / 2.05; 
@@ -1541,8 +1547,20 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
     } else if (angle === 'sole') {
       targetRotationY.current = 0.0;
       targetRotationX.current = -Math.PI / 1.95; 
+    } else if (angle === 'orbit') {
+      targetRotationY.current = Math.PI / 3.8;
+      targetRotationX.current = 0.28;
     }
   }, [angle]);
+
+  // Showcase Spin Handler
+  const handleFullSpin = () => {
+    isIdle.current = false;
+    lastInteractionTime.current = Date.now();
+    setIsSpinning(true);
+    targetRotationY.current += Math.PI * 2;
+    setTimeout(() => setIsSpinning(false), 1200);
+  };
 
   // Pointer dragging event handlers
   const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
@@ -1616,10 +1634,10 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
       const deltaX = clientX - startMouseX.current;
       const deltaY = clientY - startMouseY.current;
 
-      targetRotationY.current = rotationYRef.current + deltaX * 0.0075;
+      targetRotationY.current = rotationYRef.current + deltaX * 0.008;
       targetRotationX.current = Math.max(
         -Math.PI / 2.2,
-        Math.min(Math.PI / 2.2, rotationXRef.current + deltaY * 0.0075)
+        Math.min(Math.PI / 2.2, rotationXRef.current + deltaY * 0.008)
       );
 
       startMouseX.current = clientX;
@@ -1633,7 +1651,7 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
   };
 
   return (
-    <div className="preview-stage-wrapper" style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
+    <div className="preview-stage-wrapper">
       {/* Interactive 3D Canvas Stage */}
       <div 
         ref={containerRef}
@@ -1645,33 +1663,62 @@ export const ShoePreviewStage: React.FC<ShoePreviewStageProps> = ({
         onTouchStart={handlePointerDown}
         onTouchMove={handlePointerMove}
         onTouchEnd={handlePointerUp}
-        style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', cursor: isDraggingLogo.current ? 'grabbing' : 'grab', overflow: 'hidden' }}
+        style={{ cursor: isDraggingLogo.current ? 'grabbing' : 'grab' }}
       >
-        <div className="shoe-ambient-lighting" style={{ pointerEvents: 'none' }} />
+        <div className="shoe-ambient-lighting" />
         
-        <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block', outline: 'none' }} />
+        <canvas ref={canvasRef} className="shoe-3d-canvas" />
 
-        <div className="drag-hint" style={{ pointerEvents: 'none', position: 'absolute', bottom: '12px' }}>
-          <span>Drag shoe to rotate 360° | Drag logo to position</span>
+        <div className="drag-hint">
+          <Move3D size={14} />
+          <span>Drag to rotate 360° | Drag logo badge to reposition</span>
         </div>
       </div>
 
-      {/* Camera Angles / Zoom Controls */}
+      {/* Floating Camera Angles, Turntable & Zoom Toolbar */}
       <div className="camera-nav-bar">
-        {(['side', 'top', 'back', 'sole'] as const).map((vAngle) => (
-          <button 
-            key={vAngle}
-            className={`camera-angle-tab ${angle === vAngle ? 'active' : ''}`}
-            onClick={() => setAngle(vAngle)}
-          >
-            {vAngle.toUpperCase()}
-          </button>
-        ))}
+        <div className="view-angle-buttons">
+          {(['side', 'front', 'top', 'back', 'sole', 'orbit'] as const).map((vAngle) => (
+            <button 
+              key={vAngle}
+              className={`camera-angle-tab ${angle === vAngle ? 'active' : ''}`}
+              onClick={() => setAngle(vAngle)}
+            >
+              {vAngle.toUpperCase()}
+            </button>
+          ))}
+        </div>
 
-        <div className="zoom-controls">
-          <button className="zoom-btn" onClick={() => setZoom(z => Math.max(0.7, z - 0.1))}><Minus size={16} /></button>
-          <span className="zoom-val">{Math.round(zoom * 100)}%</span>
-          <button className="zoom-btn" onClick={() => setZoom(z => Math.min(1.5, z + 0.1))}><Plus size={16} /></button>
+        <div className="motion-control-group">
+          {/* Showcase 360 Spin Button */}
+          <button 
+            className={`motion-btn ${isSpinning ? 'spinning' : ''}`}
+            onClick={handleFullSpin}
+            title="360° Full Showcase Spin"
+          >
+            <RotateCw size={16} className={isSpinning ? 'animate-spin' : ''} />
+            <span className="btn-label-desktop">Spin 360°</span>
+          </button>
+
+          {/* Auto rotate toggle */}
+          <button 
+            className={`motion-btn ${isAutoRotate ? 'active' : ''}`}
+            onClick={() => setIsAutoRotate(prev => !prev)}
+            title={isAutoRotate ? "Pause Turntable Auto-Rotation" : "Enable Turntable Auto-Rotation"}
+          >
+            {isAutoRotate ? <Pause size={16} /> : <Play size={16} />}
+            <span className="btn-label-desktop">{isAutoRotate ? "Auto-Rotate" : "Static"}</span>
+          </button>
+
+          <div className="zoom-controls">
+            <button className="zoom-btn" onClick={() => setZoom(z => Math.max(0.7, z - 0.1))} title="Zoom Out">
+              <Minus size={16} />
+            </button>
+            <span className="zoom-val">{Math.round(zoom * 100)}%</span>
+            <button className="zoom-btn" onClick={() => setZoom(z => Math.min(1.5, z + 0.1))} title="Zoom In">
+              <Plus size={16} />
+            </button>
+          </div>
         </div>
       </div>
     </div>

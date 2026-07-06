@@ -94,13 +94,7 @@ const LUXURY_PALETTES = {
   brand: ['#0B1E2D', '#7FC8E8', '#4A9FCB', '#60B7DF', '#F5A63B', '#FFFFFF', '#D4EDF9', '#132A3E'],
   metallic: ['#D4AF37', '#C0C0C0', '#E5E4E2', '#B87333', '#8A7F8D', '#DAA520', '#C3B091', '#4C516D'],
   neon: ['#FF007F', '#00F0FF', '#E0FF00', '#39FF14', '#FF5E00', '#8F00FF', '#FF00CC', '#00FF66'],
-  pastel: ['#FFC0CB', '#B0E0E6', '#E6E6FA', '#F0E68C', '#FFF0F5', '#F0FFF0', '#F5FFFA', '#FAF0E6'],
-  gradients: [
-    'linear-gradient(135deg, #FF007F 0%, #00F0FF 100%)',
-    'linear-gradient(135deg, #0B1E2D 0%, #7FC8E8 100%)',
-    'linear-gradient(135deg, #F5A63B 0%, #D50000 100%)',
-    'linear-gradient(135deg, #2E7D32 0%, #E0FF00 100%)'
-  ]
+  pastel: ['#FFC0CB', '#B0E0E6', '#E6E6FA', '#F0E68C', '#FFF0F5', '#F0FFF0', '#F5FFFA', '#FAF0E6']
 };
 
 export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) => {
@@ -185,14 +179,8 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
   // Smart suggestions matching combinations
   const [colorSuggestions, setColorSuggestions] = useState<string[][]>([]);
 
-  // Color picker custom color fields
-  const [colorInput, setColorInput] = useState('#FFFFFF');
-  const [recentColors, setRecentColors] = useState<string[]>(['#FFFFFF', '#16181C', '#D50000', '#0D47A1', '#7FC8E8']);
-  const [favoriteColors, setFavoriteColors] = useState<string[]>(['#7FC8E8', '#F5A63B']);
-
   // Modals & Certificate states
   const [showCertificate, setShowCertificate] = useState(false);
-  const [showShareModal, setShowShareModal] = useState(false);
   const [certificateSerial, setCertificateSerial] = useState('');
   const [size, setSize] = useState<number>(9);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -282,7 +270,6 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         inline: 'center'
       });
     }
-    // Auto restore bottom sheet if minimized when navigating
     if (sheetState === 'minimized') {
       setSheetState('half');
     }
@@ -399,12 +386,13 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
     setColorSuggestions(suggestions);
   }, [selectedPart, colors]);
 
-  // Convert Hex to HSL to compute premium colorways
   const generateColorSuggestions = (hex: string) => {
-    // Basic HSL parser
-    const r = parseInt(hex.slice(1, 3), 16) / 255;
-    const g = parseInt(hex.slice(3, 5), 16) / 255;
-    const b = parseInt(hex.slice(5, 7), 16) / 255;
+    let r = 255, g = 255, b = 255;
+    if (hex.startsWith('#') && hex.length >= 7) {
+      r = parseInt(hex.slice(1, 3), 16) / 255;
+      g = parseInt(hex.slice(3, 5), 16) / 255;
+      b = parseInt(hex.slice(5, 7), 16) / 255;
+    }
     const max = Math.max(r, g, b), min = Math.min(r, g, b);
     let h = 0, s = 0, l = (max + min) / 2;
 
@@ -420,41 +408,35 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
     }
     h = Math.round(h * 360);
 
-    // AI suggestions logic based on active color hue
     if (h >= 0 && h < 30) {
-      // Reds / Oranges
       return [
-        ['#FFFFFF', '#0B1E2D', '#F5A63B'], // Coral Sunset theme
-        ['#16181C', '#C0C0C0', '#D50000'], // High-Contrast Racing
-        ['#FAF0CA', '#8D5B4C', '#D4AF37']  // Autumn Gold
+        ['#FFFFFF', '#0B1E2D', '#F5A63B'],
+        ['#16181C', '#C0C0C0', '#D50000'],
+        ['#FAF0CA', '#8D5B4C', '#D4AF37']
       ];
     } else if (h >= 30 && h < 80) {
-      // Cream / Yellow
       return [
-        ['#8D5B4C', '#D4AF37', '#16181C'], // Desert Camel & Gold
-        ['#FFFFFF', '#7FC8E8', '#0D47A1'], // Sky Beach
-        ['#2E7D32', '#FAF0CA', '#FFFFFF']  // Forest Cream
+        ['#8D5B4C', '#D4AF37', '#16181C'],
+        ['#FFFFFF', '#7FC8E8', '#0D47A1'],
+        ['#2E7D32', '#FAF0CA', '#FFFFFF']
       ];
     } else if (h >= 80 && h < 170) {
-      // Green
       return [
-        ['#16181C', '#70E000', '#FF007F'], // Tokyo Underground (Green/Magenta/Black)
-        ['#FFFFFF', '#D4AF37', '#2E7D32'], // Emerald Luxury
-        ['#EAF6FC', '#4A9FCB', '#FFFFFF']  // Frozen Mint
+        ['#16181C', '#70E000', '#FF007F'],
+        ['#FFFFFF', '#D4AF37', '#2E7D32'],
+        ['#EAF6FC', '#4A9FCB', '#FFFFFF']
       ];
     } else if (h >= 170 && h < 260) {
-      // Blue / Cyan
       return [
-        ['#FFFFFF', '#F5A63B', '#0B1E2D'], // Nautical Classic
-        ['#FF007F', '#E0FF00', '#16181C'], // Cyber Runner
-        ['#EAF6FC', '#D4EDF9', '#FFFFFF']  // Triple Ice White
+        ['#FFFFFF', '#F5A63B', '#0B1E2D'],
+        ['#FF007F', '#E0FF00', '#16181C'],
+        ['#EAF6FC', '#D4EDF9', '#FFFFFF']
       ];
     } else {
-      // Purple / Magenta / Pink
       return [
-        ['#00F0FF', '#16181C', '#E0FF00'], // Neon Synthwave
-        ['#FFFFFF', '#FFC0CB', '#D4AF37'], // Pastel Rose Gold
-        ['#0B1E2D', '#BFE3F5', '#FFFFFF']  // Night Frost
+        ['#00F0FF', '#16181C', '#E0FF00'],
+        ['#FFFFFF', '#FFC0CB', '#D4AF37'],
+        ['#0B1E2D', '#BFE3F5', '#FFFFFF']
       ];
     }
   };
@@ -481,47 +463,17 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
     }, 3200);
   };
 
-  // High-Resolution Background-Removed Image Generator (Fully Local & Fast)
+  // High-Resolution Background-Removed Image Generator
   const handleGenerateHDImage = async () => {
-    const svgEl = document.querySelector('.shoe-svg-viewport svg');
-    if (!svgEl) return;
+    const canvas = document.querySelector('.shoe-3d-canvas') as HTMLCanvasElement;
+    if (!canvas) return;
     
     setIsGenerating(true);
-    triggerToast('Generating studio render (removing background)...');
+    triggerToast('Generating high-res studio render...');
 
     try {
-      // 1. Serialize SVG elements
-      const serializer = new XMLSerializer();
-      let svgStr = serializer.serializeToString(svgEl);
-
-      // 2. Load into image object
-      const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-      const url = URL.createObjectURL(svgBlob);
-      
-      const img = new Image();
-      img.src = url;
-      
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-      });
-
-      // 3. Draw onto a high-definition canvas (1200x768)
-      const canvas = document.createElement('canvas');
-      canvas.width = 1200;
-      canvas.height = 768;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Failed to instantiate 2D canvas context');
-      
-      // Paint white background so U2-Net can isolate correctly
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, 1200, 768);
-      ctx.drawImage(img, 150, 84, 900, 600); // center the shoe
-      
       const pngData = canvas.toDataURL('image/png');
-      URL.revokeObjectURL(url);
 
-      // 4. POST base64 image data to the local Vite connect middleware
       const response = await fetch('/api/remove-bg', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -534,7 +486,6 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
 
       const result = await response.json();
 
-      // 5. Download the clean, isolated PNG
       const link = document.createElement('a');
       link.href = result.image;
       link.download = `${designTitle.replace(/\s+/g, '_')}_studio_render.png`;
@@ -546,7 +497,13 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
       confetti({ particleCount: 100, spread: 60, origin: { y: 0.8 } });
     } catch (err: any) {
       console.error(err);
-      triggerToast('Error: ' + err.message);
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `${designTitle.replace(/\s+/g, '_')}_render.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      triggerToast('Downloaded Studio Render PNG!');
     } finally {
       setIsGenerating(false);
     }
@@ -589,7 +546,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
             value: event.target!.result as string
           }));
           setActivePreset(null);
-          triggerToast('Logo loaded! Drag it on the side panel to reposition.');
+          triggerToast('Logo loaded! Drag badge on side panel to reposition.');
         }
       };
       reader.readAsDataURL(file);
@@ -605,7 +562,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
       category: 'Custom Tech',
       price: pricing.total,
       formattedPrice: `Rs. ${pricing.total.toLocaleString()}`,
-      image: '/shoes/hero_white.png', // Fallback display thumbnail
+      image: '/shoes/hero_white.png',
       description: `Custom ${baseModel} configured with ${material} material, ${laces.type} laces, and custom logo accents.`,
       details: [
         `Base Model: ${baseModel}`,
@@ -623,22 +580,18 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
     onClose();
   };
 
-  // Download SVG Preview
+  // Download canvas Snapshot
   const handleDownload = () => {
-    const svgEl = document.querySelector('.shoe-svg-viewport svg');
-    if (svgEl) {
-      const svgString = new XMLSerializer().serializeToString(svgEl);
-      const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
-      const URL = window.URL || window.webkitURL || window;
-      const blobURL = URL.createObjectURL(svgBlob);
-      
+    const canvas = document.querySelector('.shoe-3d-canvas') as HTMLCanvasElement;
+    if (canvas) {
+      const blobURL = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.href = blobURL;
-      link.download = `${designTitle.replace(/\s+/g, '_')}_custom_shoe.svg`;
+      link.download = `${designTitle.replace(/\s+/g, '_')}_custom_shoe.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      triggerToast('Downloaded Vector Shoe Layout!');
+      triggerToast('Downloaded Sneaker Snapshot PNG!');
     }
   };
 
@@ -665,11 +618,11 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           ) : (
             <h2 className="title-display" onClick={() => setIsEditingTitle(true)}>
               {designTitle}
-              <Sliders size={14} className="edit-icon" />
+              <Sliders size={16} className="edit-icon" />
             </h2>
           )}
           <span className="live-save-badge">
-            <Check size={12} /> Auto-Saved
+            <Check size={14} /> Auto-Saved
           </span>
         </div>
 
@@ -686,7 +639,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
             <Share2 size={18} />
             <span className="desktop-only">Share</span>
           </button>
-          <button className="icon-header-btn" onClick={handleDownload} title="Download SVG Design">
+          <button className="icon-header-btn" onClick={handleDownload} title="Download Snapshot PNG">
             <Download size={18} />
           </button>
         </div>
@@ -695,31 +648,29 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
       {/* Main Dual Pane Layout */}
       <main className={`customizer-workspace sheet-${sheetState}`}>
         
-        {/* LEFT PANE: Premium Preview Studio */}
+        {/* LEFT PANE: Premium 3D Preview Studio */}
         <section className="preview-stage-pane">
           {/* Top Info Chips */}
           <div className="stage-top-chips">
             <div className="limited-badge">
-              <Sparkles size={12} /> 1 OF 1 CUSTOM
+              <Sparkles size={14} /> 1 OF 1 CUSTOM STUDIO
             </div>
             <div className="delivery-est">
               <Truck size={14} /> Est. Delivery: {new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
             </div>
           </div>
 
-          {/* Optimized Interactive Drag & Preview Stage */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between' }}>
-            <ShoePreviewStage
-              baseModel={baseModel}
-              colors={colors}
-              laces={laces}
-              soleType={soleType}
-              material={material}
-              logo={logo}
-              accessories={accessories}
-              onLogoPositionChange={(pos) => setLogo(prev => ({ ...prev, position: pos }))}
-            />
-          </div>
+          {/* 3D Interactive Stage Component */}
+          <ShoePreviewStage
+            baseModel={baseModel}
+            colors={colors}
+            laces={laces}
+            soleType={soleType}
+            material={material}
+            logo={logo}
+            accessories={accessories}
+            onLogoPositionChange={(pos) => setLogo(prev => ({ ...prev, position: pos }))}
+          />
 
           {/* Quick Presets Bar */}
           <div className="quick-presets-strip">
@@ -828,7 +779,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                 {colorSuggestions.length > 0 && (
                   <div className="smart-suggestions-block">
                     <div className="suggestions-header">
-                      <Sparkles size={14} className="badge-sparkle" />
+                      <Sparkles size={16} className="badge-sparkle" />
                       <span>Smart Matching Palettes (AI-Assisted)</span>
                     </div>
                     <div className="suggestions-list">
@@ -837,7 +788,6 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                           key={pIdx} 
                           className="palette-row"
                           onClick={() => {
-                            // Apply matching palette colors
                             setColors(prev => ({
                               ...prev,
                               upper: palette[0],
@@ -941,7 +891,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                   <div className="custom-color-inputs">
                     <div className="inputs-row">
                       <div className="color-input-box">
-                        <label>HEX</label>
+                        <label>HEX COLOR</label>
                         <input
                           type="text"
                           value={colors[selectedPart]}
@@ -952,7 +902,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                         />
                       </div>
                       <div className="color-input-box">
-                        <label>Eyedropper</label>
+                        <label>EYEDROPPER</label>
                         <input
                           type="color"
                           value={colors[selectedPart]}
@@ -1133,7 +1083,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                       }}
                       placeholder="e.g. ODD"
                     />
-                    <p className="field-hint">Tip: Drag the logo directly on the shoe side panel to reposition.</p>
+                    <p className="field-hint">Tip: Drag the logo badge directly on the shoe side panel to reposition.</p>
                   </div>
                 )}
 
@@ -1254,7 +1204,6 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
 
           {/* STEP FOOTER: PRICE & PROGRESS CONTROLS */}
           <div className="configurator-footer-summary">
-            {/* Pricing breakdown summary */}
             <div className="pricing-bar">
               <div className="pricing-info">
                 <span className="label">Total Price</span>
@@ -1272,7 +1221,6 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
               </div>
             </div>
 
-            {/* Stepper Buttons */}
             <div className="navigation-actions-row">
               <button 
                 className="step-nav-arrow-btn"
@@ -1294,7 +1242,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                   className="add-to-cart-cta-btn"
                   onClick={handleCheckoutAdd}
                 >
-                  <ShoppingCart size={18} />
+                  <ShoppingCart size={20} />
                   <span>Add to Bag</span>
                 </button>
               )}
@@ -1303,7 +1251,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         </section>
       </main>
 
-      {/* -------------------- MODAL: "DESIGNED BY YOU" CERTIFICATE OF AUTHENTICITY -------------------- */}
+      {/* MODAL: "DESIGNED BY YOU" CERTIFICATE OF AUTHENTICITY */}
       {showCertificate && (
         <div className="certificate-modal-overlay">
           <div className="certificate-card">
@@ -1364,7 +1312,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         </div>
       )}
 
-      {/* -------------------- FLOATING NOTIFICATION TOAST -------------------- */}
+      {/* FLOATING NOTIFICATION TOAST */}
       {toastMessage && (
         <div className="floating-toast-alert animate-slide">
           <Sparkles size={16} color="var(--oddshoe-amber)" />
@@ -1425,12 +1373,12 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
             gap: 8px !important;
           }
           .title-display {
-            font-size: 1rem !important;
+            font-size: 1.1rem !important;
             text-align: center;
             justify-content: center;
           }
           .title-edit-input {
-            font-size: 1rem !important;
+            font-size: 1.1rem !important;
             max-width: 240px;
           }
         }
@@ -1442,16 +1390,16 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           font-weight: 800;
           color: var(--oddshoe-navy-900);
           font-size: 0.95rem;
-          padding: 12px 16px;
-          border-radius: 8px;
-          background: rgba(255,255,255,0.3);
+          padding: 12px 18px;
+          border-radius: 10px;
+          background: rgba(255,255,255,0.45);
           border: 1px solid var(--glass-border-standard);
           transition: all var(--transition-fast);
-          min-height: 44px;
+          min-height: 48px;
         }
 
         .back-to-store-btn:hover {
-          background: rgba(255,255,255,0.6);
+          background: rgba(255,255,255,0.75);
           transform: translateX(-3px);
         }
 
@@ -1459,13 +1407,13 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
         }
 
         .title-display {
           font-family: var(--font-display);
           font-weight: 800;
-          font-size: 1.15rem;
+          font-size: 1.35rem;
           color: var(--oddshoe-navy-900);
           cursor: pointer;
           display: flex;
@@ -1476,32 +1424,32 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         .title-edit-input {
           font-family: var(--font-display);
           font-weight: 800;
-          font-size: 1.15rem;
+          font-size: 1.35rem;
           color: var(--oddshoe-navy-900);
           border: none;
-          background: rgba(255,255,255,0.7);
-          border-radius: 4px;
-          padding: 2px 8px;
-          outline: 1.5px solid var(--oddshoe-navy-900);
+          background: rgba(255,255,255,0.85);
+          border-radius: 6px;
+          padding: 4px 12px;
+          outline: 2px solid var(--oddshoe-navy-900);
           text-align: center;
         }
 
         .edit-icon {
-          opacity: 0.5;
+          opacity: 0.6;
         }
 
         .live-save-badge {
-          font-size: 0.72rem;
+          font-size: 0.82rem;
           font-weight: 700;
           color: #2E7D32;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
         }
 
         .header-actions {
           display: flex;
-          gap: 8px;
+          gap: 10px;
         }
 
         .icon-header-btn {
@@ -1509,29 +1457,29 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           align-items: center;
           justify-content: center;
           gap: 8px;
-          background: rgba(255,255,255,0.3);
+          background: rgba(255,255,255,0.45);
           border: 1px solid var(--glass-border-standard);
-          padding: 12px;
-          min-height: 44px;
-          min-width: 44px;
-          border-radius: 8px;
-          font-weight: 700;
+          padding: 12px 18px;
+          min-height: 48px;
+          min-width: 48px;
+          border-radius: 10px;
+          font-weight: 800;
           color: var(--oddshoe-navy-900);
-          font-size: 0.85rem;
+          font-size: 0.9rem;
           transition: all var(--transition-fast);
         }
 
         .icon-header-btn:hover {
-          background: rgba(255,255,255,0.6);
+          background: rgba(255,255,255,0.75);
           transform: translateY(-2px);
         }
 
-        /* workspace */
+        /* Workspace Grid */
         .customizer-workspace {
           display: grid;
-          grid-template-columns: 1.25fr 1fr;
+          grid-template-columns: 1.15fr 1fr;
           flex: 1;
-          height: calc(100vh - 76px);
+          height: calc(100vh - 84px);
           overflow: hidden;
         }
 
@@ -1544,7 +1492,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           }
         }
 
-        /* Left side */
+        /* Left 3D Stage Pane */
         .preview-stage-pane {
           position: relative;
           display: flex;
@@ -1555,91 +1503,41 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           overflow: hidden;
         }
 
-        @media (max-width: 768px) {
-          .preview-stage-pane {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            border-right: none;
-            padding: 16px;
-            z-index: 5;
-            display: flex;
-            flex-direction: column;
-            transition: height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease;
-          }
-          /* Dynamic height based on bottom sheet state */
-          .customizer-workspace.sheet-minimized .preview-stage-pane {
-            height: calc(100vh - 120px - 120px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-          }
-          .customizer-workspace.sheet-half .preview-stage-pane {
-            height: calc(52vh - 120px - env(safe-area-inset-top, 0px));
-          }
-          .customizer-workspace.sheet-expanded .preview-stage-pane {
-            height: calc(15vh - 120px - env(safe-area-inset-top, 0px));
-            opacity: 0.15;
-            pointer-events: none;
-          }
-
-          /* Flex reordering for presets at the top on mobile */
-          .stage-top-chips {
-            order: 1;
-            margin-bottom: 8px;
-            justify-content: center;
-            gap: 16px;
-            width: 100%;
-          }
-          .quick-presets-strip {
-            order: 2;
-            margin-top: 0;
-            margin-bottom: 8px;
-            flex-direction: column;
-            align-items: stretch;
-            gap: 8px;
-          }
-          .strip-title {
-            text-align: center;
-          }
-          .preview-stage-pane > div:not(.stage-top-chips):not(.quick-presets-strip) {
-            order: 3;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            min-height: 0;
-          }
-
-          .customizer-workspace.sheet-half .interactive-drag-container {
-            transform: translateY(-24px);
-          }
+        .preview-stage-wrapper {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          justify-content: space-between;
+          flex: 1;
         }
 
         .stage-top-chips {
           display: flex;
           justify-content: space-between;
           z-index: 3;
+          margin-bottom: 8px;
         }
 
         .limited-badge {
           background: var(--oddshoe-navy-900);
           color: var(--oddshoe-white);
-          padding: 6px 12px;
+          padding: 8px 16px;
           border-radius: 20px;
-          font-size: 0.72rem;
+          font-size: 0.82rem;
           font-weight: 800;
-          letter-spacing: 0.08em;
+          letter-spacing: 0.06em;
           display: flex;
           align-items: center;
           gap: 8px;
         }
 
         .delivery-est {
-          background: rgba(255, 255, 255, 0.6);
+          background: rgba(255, 255, 255, 0.7);
           border: 1px solid var(--glass-border-standard);
-          padding: 6px 12px;
+          padding: 8px 16px;
           border-radius: 20px;
-          font-size: 0.76rem;
-          font-weight: 700;
+          font-size: 0.85rem;
+          font-weight: 800;
           color: var(--oddshoe-navy-900);
           display: flex;
           align-items: center;
@@ -1653,41 +1551,43 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           align-items: center;
           justify-content: center;
           position: relative;
-          cursor: grab;
           z-index: 2;
-          transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
-        }
-
-        .interactive-drag-container:active {
-          cursor: grabbing;
+          overflow: hidden;
+          border-radius: 24px;
+          background: rgba(255, 255, 255, 0.15);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+          box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.2);
         }
 
         .shoe-ambient-lighting {
           position: absolute;
-          width: 80%;
-          height: 80%;
-          background: radial-gradient(circle, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 65%);
+          width: 85%;
+          height: 85%;
+          background: radial-gradient(circle, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 70%);
           pointer-events: none;
         }
 
-        .svg-wrapper {
+        .shoe-3d-canvas {
           width: 100%;
-          max-width: 480px;
-          height: auto;
-          transition: transform 0.2s ease-out;
+          height: 100%;
+          display: block;
+          outline: none;
         }
 
         .drag-hint {
           position: absolute;
-          bottom: 12px;
-          background: rgba(11,30,45,0.7);
+          bottom: 14px;
+          background: rgba(11,30,45,0.75);
           color: #FFF;
-          padding: 6px 16px;
-          border-radius: 20px;
-          font-size: 0.76rem;
-          font-weight: 600;
+          padding: 8px 18px;
+          border-radius: 24px;
+          font-size: 0.82rem;
+          font-weight: 700;
           pointer-events: none;
-          backdrop-filter: blur(4px);
+          backdrop-filter: blur(8px);
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
         .camera-nav-bar {
@@ -1695,26 +1595,69 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           justify-content: space-between;
           align-items: center;
           z-index: 3;
-          background: rgba(255,255,255,0.4);
-          padding: 8px 16px;
-          border-radius: 24px;
+          background: rgba(255,255,255,0.6);
+          backdrop-filter: blur(16px);
+          padding: 10px 18px;
+          border-radius: 20px;
           border: 1px solid var(--glass-border-standard);
+          margin-top: 12px;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+
+        .view-angle-buttons {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
         }
 
         .camera-angle-tab {
-          padding: 8px 16px;
-          border-radius: 12px;
+          padding: 8px 14px;
+          border-radius: 10px;
           font-weight: 800;
-          font-size: 0.72rem;
+          font-size: 0.82rem;
           color: var(--oddshoe-navy-900);
           background: transparent;
           transition: all var(--transition-fast);
-          min-height: 44px;
+          min-height: 40px;
         }
 
         .camera-angle-tab.active {
           background: var(--oddshoe-navy-900);
           color: #FFF;
+        }
+
+        .motion-control-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .motion-btn {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          padding: 8px 14px;
+          border-radius: 10px;
+          background: rgba(255,255,255,0.75);
+          border: 1px solid var(--glass-border-standard);
+          font-size: 0.82rem;
+          font-weight: 800;
+          color: var(--oddshoe-navy-900);
+          transition: all var(--transition-fast);
+          min-height: 40px;
+        }
+
+        .motion-btn:hover {
+          background: #FFF;
+          transform: translateY(-1px);
+        }
+
+        .motion-btn.active {
+          background: var(--oddshoe-navy-900);
+          color: #FFF;
+          border-color: var(--oddshoe-navy-900);
         }
 
         .zoom-controls {
@@ -1724,44 +1667,59 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         }
 
         .zoom-btn {
-          width: 32px;
-          height: 32px;
+          width: 36px;
+          height: 36px;
           border-radius: 50%;
-          background: rgba(255,255,255,0.5);
+          background: rgba(255,255,255,0.75);
           display: flex;
           align-items: center;
           justify-content: center;
           color: var(--oddshoe-navy-900);
+          font-weight: 800;
+          border: 1px solid var(--glass-border-standard);
+          transition: all var(--transition-fast);
+        }
+
+        .zoom-btn:hover {
+          background: #FFF;
+          transform: scale(1.08);
         }
 
         .zoom-val {
-          font-size: 0.76rem;
+          font-size: 0.85rem;
           font-weight: 800;
-          min-width: 38px;
+          min-width: 44px;
           text-align: center;
+          color: var(--oddshoe-navy-900);
         }
 
         .quick-presets-strip {
           display: flex;
           align-items: center;
           gap: 16px;
-          margin-top: 16px;
+          margin-top: 14px;
           z-index: 3;
+          background: rgba(255,255,255,0.45);
+          backdrop-filter: blur(12px);
+          padding: 8px 16px;
+          border-radius: 18px;
+          border: 1px solid var(--glass-border-standard);
         }
 
         .strip-title {
           font-family: var(--font-display);
           font-weight: 800;
-          font-size: 0.78rem;
+          font-size: 0.85rem;
           text-transform: uppercase;
+          letter-spacing: 0.05em;
           color: var(--oddshoe-navy-900);
         }
 
         .presets-list {
           display: flex;
-          gap: 16px;
+          gap: 12px;
           overflow-x: auto;
-          padding: 8px 0;
+          padding: 4px 0;
           scrollbar-width: none;
         }
 
@@ -1769,12 +1727,12 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 8px 16px;
-          border-radius: 20px;
-          background: rgba(255,255,255,0.45);
+          padding: 10px 18px;
+          border-radius: 24px;
+          background: rgba(255,255,255,0.6);
           border: 1px solid var(--glass-border-standard);
-          font-size: 0.76rem;
-          font-weight: 700;
+          font-size: 0.85rem;
+          font-weight: 800;
           color: var(--oddshoe-navy-900);
           white-space: nowrap;
           transition: all var(--transition-fast);
@@ -1782,7 +1740,8 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         }
 
         .preset-pill-btn:hover {
-          background: rgba(255,255,255,0.7);
+          background: #FFF;
+          transform: translateY(-1px);
         }
 
         .preset-pill-btn.active {
@@ -1792,16 +1751,17 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         }
 
         .preset-dot {
-          width: 10px;
-          height: 10px;
+          width: 12px;
+          height: 12px;
           border-radius: 50%;
+          border: 1px solid rgba(0,0,0,0.15);
         }
 
-        /* Right side / Bottom Sheet */
+        /* Right Configurator Panel */
         .configurator-controls-pane {
-          background: rgba(255, 255, 255, 0.55);
-          backdrop-filter: blur(20px);
-          -webkit-backdrop-filter: blur(20px);
+          background: rgba(255, 255, 255, 0.65);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
           display: flex;
           flex-direction: column;
           justify-content: space-between;
@@ -1809,87 +1769,13 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           z-index: 20;
         }
 
-        @media (max-width: 768px) {
-          .configurator-controls-pane {
-            position: fixed;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border-top: 1px solid var(--glass-border-standard);
-            border-radius: 24px 24px 0 0;
-            box-shadow: 0 -10px 40px rgba(11, 30, 45, 0.12);
-            transition: top 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-            transform: translateY(0);
-          }
-          .configurator-controls-pane.sheet-expanded {
-            top: 15vh;
-            height: 85vh;
-          }
-          .configurator-controls-pane.sheet-half {
-            top: 52vh;
-            height: 48vh;
-          }
-          .configurator-controls-pane.sheet-minimized {
-            top: calc(100vh - 120px - env(safe-area-inset-bottom, 0px));
-            height: calc(120px + env(safe-area-inset-bottom, 0px));
-            border-radius: 24px 24px 0 0;
-          }
-          .configurator-controls-pane.is-dragging {
-            transition: none !important;
-          }
-        }
-
-        .bottom-sheet-handle-bar {
-          display: none;
-        }
-
-        @media (max-width: 768px) {
-          .bottom-sheet-handle-bar {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px 0;
-            cursor: grab;
-            width: 100%;
-            user-select: none;
-            background: transparent;
-            z-index: 101;
-            min-height: 24px;
-          }
-          .bottom-sheet-handle-bar:active {
-            cursor: grabbing;
-          }
-          .drag-handle-indicator {
-            width: 36px;
-            height: 4px;
-            border-radius: 2px;
-            background: var(--oddshoe-gray-400);
-            opacity: 0.5;
-          }
-        }
-
         .steps-progress-indicator {
           display: flex;
           border-bottom: 1px solid var(--glass-border-standard);
           overflow-x: auto;
           scrollbar-width: none;
-        }
-
-        .steps-progress-indicator::-webkit-scrollbar {
-          display: none;
-        }
-
-        @media (max-width: 768px) {
-          .steps-progress-indicator {
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-            -webkit-overflow-scrolling: touch;
-            padding: 8px 16px;
-            gap: 16px;
-          }
+          padding: 8px 16px;
+          gap: 8px;
         }
 
         .step-nav-btn {
@@ -1897,22 +1783,13 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           display: flex;
           flex-direction: column;
           align-items: center;
-          padding: 12px 6px;
-          gap: 8px;
+          padding: 12px 8px;
+          gap: 6px;
           border-bottom: 3px solid transparent;
-          min-width: 72px;
-          opacity: 0.55;
+          min-width: 80px;
+          opacity: 0.6;
           transition: all var(--transition-fast);
-          min-height: 48px;
-        }
-
-        @media (max-width: 768px) {
-          .step-nav-btn {
-            flex: 0 0 auto !important;
-            scroll-snap-align: center;
-            min-width: max-content !important;
-            padding: 8px 12px !important;
-          }
+          min-height: 52px;
         }
 
         .step-nav-btn.active {
@@ -1926,12 +1803,12 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         }
 
         .step-num {
-          width: 24px;
-          height: 24px;
+          width: 28px;
+          height: 28px;
           border-radius: 50%;
           background: var(--oddshoe-navy-900);
           color: #FFF;
-          font-size: 0.7rem;
+          font-size: 0.82rem;
           font-weight: 800;
           display: flex;
           align-items: center;
@@ -1939,150 +1816,117 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         }
 
         .step-label {
-          font-size: 0.65rem;
+          font-size: 0.82rem;
           font-weight: 800;
           text-transform: uppercase;
-          letter-spacing: 0.05em;
+          letter-spacing: 0.04em;
           white-space: nowrap;
+          color: var(--oddshoe-navy-900);
         }
 
-        /* Step Details */
+        /* Step Content Body */
         .step-detail-card {
           flex: 1;
           padding: 24px 32px;
           overflow-y: auto;
         }
 
-        @media (max-width: 768px) {
-          .step-detail-card {
-            padding: 16px 16px 32px;
-          }
-          .configurator-controls-pane.sheet-minimized .step-detail-card,
-          .configurator-controls-pane.sheet-minimized .steps-progress-indicator {
-            display: none;
-          }
-          .configurator-controls-pane.sheet-minimized .configurator-footer-summary {
-            border-top: none;
-            padding: 8px 16px 16px;
-          }
-        }
-
         .control-section-title {
           font-family: var(--font-display);
           font-weight: 800;
-          font-size: 1.1rem;
+          font-size: 1.2rem;
           color: var(--oddshoe-navy-900);
-          margin-bottom: 18px;
+          margin-bottom: 20px;
         }
 
         /* Step 1: Base Grid */
         .base-grid {
           display: grid;
-          grid-template-columns: 1fr 1fr;
+          grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
           gap: 16px;
         }
 
-        @media (max-width: 480px) {
-          .base-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-
         .base-item-card {
-          background: rgba(255,255,255,0.4);
+          background: rgba(255,255,255,0.55);
           border: 1px solid var(--glass-border-standard);
           border-radius: 16px;
-          padding: 16px;
+          padding: 18px;
           cursor: pointer;
           transition: all var(--transition-normal);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+        }
+
+        .base-item-card:hover {
+          background: rgba(255,255,255,0.85);
+          transform: translateY(-3px);
+          box-shadow: var(--shadow-md);
         }
 
         .base-item-card.selected {
           border-color: var(--oddshoe-navy-900);
-          background: rgba(255,255,255,0.85);
+          background: #FFF;
           box-shadow: var(--shadow-md);
         }
 
         .base-img-box {
-          height: 80px;
+          height: 110px;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-bottom: 12px;
+          margin-bottom: 14px;
         }
 
         .base-img-box img {
           max-height: 100%;
           width: auto;
-          filter: drop-shadow(0 6px 10px rgba(0,0,0,0.1));
+          filter: drop-shadow(0 6px 12px rgba(0,0,0,0.12));
         }
 
         .base-name {
           font-weight: 800;
-          font-size: 0.9rem;
+          font-size: 1.05rem;
           color: var(--oddshoe-navy-900);
           display: block;
         }
 
         .base-desc {
-          font-size: 0.72rem;
-          color: rgba(11,30,45,0.75);
-          line-height: 1.4;
-          margin-top: 4px;
+          font-size: 0.82rem;
+          color: rgba(11,30,45,0.8);
+          line-height: 1.45;
+          margin-top: 6px;
         }
 
         .base-price {
-          font-size: 0.76rem;
+          font-size: 0.88rem;
           font-weight: 800;
           color: var(--oddshoe-navy-900);
           display: block;
-          margin-top: 8px;
+          margin-top: 10px;
         }
 
-        /* Step 2: Zones & Colors */
+        /* Step 2: Color Zones & Palettes */
         .zones-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
-          gap: 8px;
+          gap: 10px;
           margin-bottom: 24px;
-        }
-
-        @media (max-width: 768px) {
-          .zones-grid {
-            display: flex;
-            overflow-x: auto;
-            scroll-snap-type: x mandatory;
-            scrollbar-width: none;
-            -webkit-overflow-scrolling: touch;
-            padding: 4px 16px;
-            gap: 12px;
-            margin-bottom: 16px;
-          }
-          .zones-grid::-webkit-scrollbar {
-            display: none;
-          }
-          .zone-select-btn {
-            flex: 0 0 auto;
-            scroll-snap-align: center;
-            min-width: max-content;
-            min-height: 44px;
-            padding: 8px 16px;
-          }
         }
 
         .zone-select-btn {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 10px;
-          border-radius: 10px;
-          background: rgba(255,255,255,0.35);
+          gap: 10px;
+          padding: 12px 14px;
+          border-radius: 12px;
+          background: rgba(255,255,255,0.5);
           border: 1px solid var(--glass-border-standard);
           transition: all var(--transition-fast);
-          font-size: 0.74rem;
-          font-weight: 700;
+          font-size: 0.85rem;
+          font-weight: 800;
           color: var(--oddshoe-navy-900);
-          min-height: 44px;
+          min-height: 50px;
         }
 
         .zone-select-btn.active {
@@ -2092,44 +1936,48 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         }
 
         .zone-color-indicator {
-          width: 14px;
-          height: 14px;
+          width: 18px;
+          height: 18px;
           border-radius: 50%;
-          border: 1px solid rgba(0,0,0,0.15);
+          border: 1.5px solid rgba(0,0,0,0.2);
+          flex-shrink: 0;
         }
 
-        /* AI suggestions */
         .smart-suggestions-block {
-          background: rgba(245, 166, 59, 0.08);
-          border: 1px solid rgba(245, 166, 59, 0.35);
-          border-radius: 12px;
-          padding: 12px;
-          margin-bottom: 20px;
+          background: rgba(245, 166, 59, 0.12);
+          border: 1px solid rgba(245, 166, 59, 0.4);
+          border-radius: 14px;
+          padding: 14px 18px;
+          margin-bottom: 24px;
         }
 
         .suggestions-header {
           display: flex;
           align-items: center;
-          gap: 6px;
-          font-size: 0.72rem;
+          gap: 8px;
+          font-size: 0.82rem;
           font-weight: 800;
           color: var(--oddshoe-amber-hover);
           text-transform: uppercase;
+          letter-spacing: 0.04em;
         }
 
         .suggestions-list {
           display: flex;
-          gap: 12px;
-          margin-top: 10px;
+          gap: 14px;
+          margin-top: 12px;
+          flex-wrap: wrap;
         }
 
         .palette-row {
           display: flex;
-          padding: 4px;
-          background: rgba(255,255,255,0.7);
-          border-radius: 20px;
+          padding: 6px 12px;
+          background: #FFF;
+          border-radius: 24px;
           cursor: pointer;
-          border: 1px solid transparent;
+          border: 1.5px solid transparent;
+          box-shadow: var(--shadow-sm);
+          align-items: center;
         }
 
         .palette-row:hover {
@@ -2137,289 +1985,289 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         }
 
         .palette-color-dot {
-          width: 16px;
-          height: 16px;
+          width: 20px;
+          height: 20px;
           border-radius: 50%;
-          margin: 0 2px;
+          margin: 0 3px;
+          border: 1px solid rgba(0,0,0,0.1);
         }
 
-        /* Premium picker */
         .premium-color-selectors {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 20px;
         }
 
         .picker-header {
-          font-size: 0.76rem;
+          font-size: 0.85rem;
           font-weight: 800;
           text-transform: uppercase;
           color: var(--oddshoe-navy-900);
           border-bottom: 1px solid rgba(0,0,0,0.1);
-          padding-bottom: 4px;
+          padding-bottom: 6px;
+          letter-spacing: 0.05em;
         }
 
         .color-row-group {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 10px;
         }
 
         .row-label {
-          font-size: 0.72rem;
-          font-weight: 700;
-          color: rgba(11,30,45,0.7);
+          font-size: 0.82rem;
+          font-weight: 800;
+          color: rgba(11,30,45,0.75);
         }
 
         .colors-grid {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: 10px;
         }
 
         .color-bubble {
-          width: 32px;
-          height: 32px;
+          width: 42px;
+          height: 42px;
           border-radius: 50%;
-          border: 1.5px solid #FFF;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+          border: 2px solid #FFF;
+          box-shadow: 0 3px 8px rgba(0,0,0,0.12);
           cursor: pointer;
-          transition: all 0.15s ease;
+          transition: all 0.18s ease;
           position: relative;
         }
 
-        .color-bubble::after {
-          content: '';
-          position: absolute;
-          top: -6px;
-          left: -6px;
-          right: -6px;
-          bottom: -6px;
+        .color-bubble:hover {
+          transform: scale(1.12);
         }
 
         .color-bubble.selected {
-          transform: scale(1.22);
+          transform: scale(1.18);
           border-color: var(--oddshoe-navy-900);
+          box-shadow: 0 4px 14px rgba(11,30,45,0.25);
         }
 
         .custom-color-inputs .inputs-row {
           display: flex;
           gap: 16px;
           flex-wrap: wrap;
+          margin-top: 8px;
         }
 
         .color-input-box {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 6px;
         }
 
         .color-input-box label {
-          font-size: 0.65rem;
+          font-size: 0.78rem;
           font-weight: 800;
           color: var(--oddshoe-navy-900);
         }
 
         .color-input-box input[type="text"] {
           border: 1px solid var(--glass-border-standard);
-          background: rgba(255,255,255,0.6);
-          border-radius: 6px;
-          padding: 6px 12px;
-          font-size: 0.8rem;
-          font-weight: 700;
-          width: 90px;
-          min-height: 44px;
+          background: rgba(255,255,255,0.85);
+          border-radius: 8px;
+          padding: 10px 16px;
+          font-size: 0.95rem;
+          font-weight: 800;
+          width: 120px;
+          min-height: 48px;
+          color: var(--oddshoe-navy-900);
         }
 
         .color-input-box input[type="color"] {
           border: none;
           background: transparent;
-          width: 44px;
-          height: 44px;
+          width: 48px;
+          height: 48px;
           cursor: pointer;
         }
 
-        /* Laces */
+        /* Step 3: Laces */
         .control-option-group {
-          margin-bottom: 20px;
+          margin-bottom: 24px;
         }
 
         .option-label {
-          font-size: 0.78rem;
+          font-size: 0.88rem;
           font-weight: 800;
           color: var(--oddshoe-navy-900);
           display: block;
-          margin-bottom: 8px;
+          margin-bottom: 10px;
         }
 
         .toggle-options-grid {
           display: flex;
           flex-wrap: wrap;
-          gap: 8px;
+          gap: 10px;
         }
 
         .toggle-option-btn {
-          padding: 8px 14px;
-          background: rgba(255,255,255,0.4);
+          padding: 12px 18px;
+          background: rgba(255,255,255,0.5);
           border: 1px solid var(--glass-border-standard);
-          border-radius: 8px;
-          font-size: 0.72rem;
+          border-radius: 12px;
+          font-size: 0.85rem;
           font-weight: 800;
           color: var(--oddshoe-navy-900);
           transition: all var(--transition-fast);
-          min-height: 44px;
+          min-height: 48px;
         }
 
         .toggle-option-btn.active {
           background: var(--oddshoe-navy-900);
           color: #FFF;
+          border-color: var(--oddshoe-navy-900);
         }
 
-        /* Sole type lists */
+        /* Step 4: Sole */
         .sole-types-list {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 12px;
         }
 
         .sole-select-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          background: rgba(255,255,255,0.4);
+          background: rgba(255,255,255,0.5);
           border: 1px solid var(--glass-border-standard);
-          border-radius: 12px;
-          padding: 12px 18px;
+          border-radius: 14px;
+          padding: 16px 20px;
           cursor: pointer;
           transition: all var(--transition-fast);
-          min-height: 48px;
+          min-height: 56px;
         }
 
         .sole-select-row.selected {
           background: #FFF;
           border-color: var(--oddshoe-navy-900);
+          box-shadow: var(--shadow-sm);
         }
 
         .row-info .sole-name {
           font-weight: 800;
-          font-size: 0.85rem;
+          font-size: 1rem;
           color: var(--oddshoe-navy-900);
         }
 
         .row-info .sole-desc {
-          font-size: 0.72rem;
-          color: rgba(11,30,45,0.7);
-          margin-top: 2px;
+          font-size: 0.82rem;
+          color: rgba(11,30,45,0.75);
+          margin-top: 4px;
         }
 
         .radio-dot {
-          width: 14px;
-          height: 14px;
+          width: 18px;
+          height: 18px;
           border-radius: 50%;
           border: 2px solid var(--oddshoe-navy-900);
           position: relative;
+          flex-shrink: 0;
         }
 
         .sole-select-row.selected .radio-dot::after {
           content: '';
           position: absolute;
-          top: 2px;
-          left: 2px;
-          width: 6px;
-          height: 6px;
+          top: 3px;
+          left: 3px;
+          width: 8px;
+          height: 8px;
           border-radius: 50%;
           background: var(--oddshoe-navy-900);
         }
 
-        /* Materials */
+        /* Step 5: Materials */
         .materials-grid {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 10px;
         }
 
         .material-card-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 12px 18px;
-          background: rgba(255,255,255,0.4);
+          padding: 16px 20px;
+          background: rgba(255,255,255,0.5);
           border: 1px solid var(--glass-border-standard);
-          border-radius: 12px;
+          border-radius: 14px;
           cursor: pointer;
           transition: all var(--transition-fast);
-          min-height: 48px;
+          min-height: 56px;
         }
 
         .material-card-row.selected {
           background: #FFF;
           border-color: var(--oddshoe-navy-900);
+          box-shadow: var(--shadow-sm);
         }
 
         .mat-details .mat-name {
           font-weight: 800;
-          font-size: 0.85rem;
+          font-size: 1rem;
           color: var(--oddshoe-navy-900);
         }
 
         .mat-details .mat-desc {
-          font-size: 0.72rem;
-          color: rgba(11,30,45,0.7);
-          margin-top: 2px;
+          font-size: 0.82rem;
+          color: rgba(11,30,45,0.75);
+          margin-top: 4px;
         }
 
         .mat-cost-badge {
-          font-size: 0.76rem;
+          font-size: 0.85rem;
           font-weight: 800;
           color: var(--oddshoe-navy-900);
-          background: rgba(255,255,255,0.85);
-          padding: 4px 10px;
+          background: rgba(255,255,255,0.9);
+          padding: 6px 14px;
           border-radius: 20px;
+          border: 1px solid rgba(0,0,0,0.1);
         }
 
-        /* Logo */
+        /* Step 6: Logo */
         .input-block {
-          margin-top: 16px;
+          margin-top: 18px;
         }
 
         .input-field-label {
-          font-size: 0.76rem;
+          font-size: 0.85rem;
           font-weight: 800;
           color: var(--oddshoe-navy-900);
           display: block;
-          margin-bottom: 6px;
+          margin-bottom: 8px;
         }
 
         .text-signature-input {
           width: 100%;
           border: 1px solid var(--glass-border-standard);
-          background: rgba(255,255,255,0.7);
-          border-radius: 8px;
-          padding: 10px 14px;
-          font-size: 0.9rem;
+          background: rgba(255,255,255,0.85);
+          border-radius: 10px;
+          padding: 12px 18px;
+          font-size: 1.05rem;
           font-weight: 800;
           color: var(--oddshoe-navy-900);
           outline: none;
-          min-height: 44px;
-        }
-
-        .text-signature-input:focus {
-          border-color: var(--oddshoe-navy-900);
+          min-height: 50px;
         }
 
         .file-uploader-stage {
           position: relative;
-          border: 2px dashed rgba(11,30,45,0.3);
-          border-radius: 12px;
-          padding: 24px;
+          border: 2px dashed rgba(11,30,45,0.35);
+          border-radius: 14px;
+          padding: 28px;
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 8px;
-          font-weight: 700;
-          font-size: 0.8rem;
+          gap: 10px;
+          font-weight: 800;
+          font-size: 0.9rem;
           color: var(--oddshoe-navy-900);
-          background: rgba(255,255,255,0.3);
+          background: rgba(255,255,255,0.4);
         }
 
         .file-input-cover {
@@ -2433,22 +2281,22 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         }
 
         .field-hint {
-          font-size: 0.68rem;
-          color: rgba(11,30,45,0.65);
-          margin-top: 6px;
+          font-size: 0.8rem;
+          color: rgba(11,30,45,0.7);
+          margin-top: 8px;
         }
 
         .logo-scale-slider {
-          margin-top: 20px;
+          margin-top: 24px;
         }
 
         .slider-labels {
           display: flex;
           justify-content: space-between;
-          font-size: 0.72rem;
+          font-size: 0.85rem;
           font-weight: 800;
           color: var(--oddshoe-navy-900);
-          margin-bottom: 6px;
+          margin-bottom: 8px;
         }
 
         .slider-input {
@@ -2457,11 +2305,11 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           min-height: 36px;
         }
 
-        /* Accessories Grouping & Padding styling */
+        /* Step 7: Accessories */
         .accessory-group-container {
           display: flex;
           flex-direction: column;
-          gap: 24px;
+          gap: 28px;
         }
 
         .accessory-section {
@@ -2473,141 +2321,147 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         .accessory-section-title {
           font-family: var(--font-display);
           font-weight: 800;
-          font-size: 0.9rem;
+          font-size: 0.95rem;
           text-transform: uppercase;
           letter-spacing: 0.05em;
           color: var(--oddshoe-navy-900);
-          border-bottom: 1px solid rgba(0,0,0,0.08);
+          border-bottom: 1px solid rgba(0,0,0,0.1);
           padding-bottom: 8px;
         }
 
         .accessories-checkboxes-list {
           display: flex;
           flex-direction: column;
-          gap: 8px;
+          gap: 10px;
         }
 
         .acc-checkbox-row {
           display: flex;
           align-items: center;
-          gap: 12px;
-          padding: 12px;
-          background: rgba(255,255,255,0.4);
+          gap: 14px;
+          padding: 16px;
+          background: rgba(255,255,255,0.5);
           border: 1px solid var(--glass-border-standard);
-          border-radius: 12px;
+          border-radius: 14px;
           cursor: pointer;
           transition: all var(--transition-fast);
-          min-height: 48px;
+          min-height: 56px;
         }
 
         .acc-checkbox-row.selected {
           background: #FFF;
           border-color: var(--oddshoe-navy-900);
+          box-shadow: var(--shadow-sm);
         }
 
         .check-box-outer {
-          width: 18px;
-          height: 18px;
-          border-radius: 4px;
+          width: 22px;
+          height: 22px;
+          border-radius: 6px;
           border: 2px solid var(--oddshoe-navy-900);
           display: flex;
           align-items: center;
           justify-content: center;
+          flex-shrink: 0;
         }
 
         .acc-checkbox-row.selected .check-box-dot {
-          width: 10px;
-          height: 10px;
+          width: 12px;
+          height: 12px;
           background: var(--oddshoe-navy-900);
-          border-radius: 1px;
+          border-radius: 2px;
         }
 
         .acc-info .acc-title {
           font-weight: 800;
-          font-size: 0.85rem;
+          font-size: 0.95rem;
           color: var(--oddshoe-navy-900);
           display: block;
         }
 
         .acc-info .acc-desc {
-          font-size: 0.7rem;
-          color: rgba(11,30,45,0.7);
+          font-size: 0.82rem;
+          color: rgba(11,30,45,0.75);
           margin-top: 2px;
         }
 
         .acc-cost {
           margin-left: auto;
-          font-size: 0.76rem;
+          font-size: 0.85rem;
           font-weight: 800;
           color: var(--oddshoe-navy-900);
+          flex-shrink: 0;
         }
 
         .acc-text-inputs {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 16px;
         }
 
         .input-group-acc {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
         }
 
         .input-group-acc label {
-          font-size: 0.72rem;
+          font-size: 0.82rem;
           font-weight: 800;
           color: var(--oddshoe-navy-900);
         }
 
         .input-group-acc input {
           border: 1px solid var(--glass-border-standard);
-          background: rgba(255,255,255,0.7);
-          border-radius: 8px;
-          padding: 8px 12px;
-          font-size: 0.8rem;
-          font-weight: 700;
+          background: rgba(255,255,255,0.85);
+          border-radius: 10px;
+          padding: 10px 16px;
+          font-size: 0.95rem;
+          font-weight: 800;
           outline: none;
-          min-height: 44px;
+          min-height: 48px;
+          color: var(--oddshoe-navy-900);
         }
 
         /* Footer */
         .configurator-footer-summary {
           border-top: 1px solid var(--glass-border-standard);
-          background: rgba(255, 255, 255, 0.7);
-          padding: 16px 32px calc(16px + env(safe-area-inset-bottom, 0px));
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(16px);
+          padding: 20px 32px calc(20px + env(safe-area-inset-bottom, 0px));
         }
 
         .pricing-bar {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 12px;
+          margin-bottom: 16px;
         }
 
         .pricing-info .label {
-          font-size: 0.7rem;
-          font-weight: 700;
+          font-size: 0.78rem;
+          font-weight: 800;
           text-transform: uppercase;
           color: rgba(11,30,45,0.75);
           display: block;
+          letter-spacing: 0.05em;
         }
 
         .pricing-info .total-val {
           font-family: var(--font-display);
           font-weight: 800;
-          font-size: 1.35rem;
+          font-size: 1.6rem;
           color: var(--oddshoe-navy-900);
         }
 
         .size-selector-box {
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 6px;
         }
 
         .size-selector-box label {
-          font-size: 0.65rem;
+          font-size: 0.75rem;
           font-weight: 800;
           color: var(--oddshoe-navy-900);
         }
@@ -2615,16 +2469,17 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         .size-selector-box select {
           border: 1px solid var(--glass-border-standard);
           background: #FFF;
-          padding: 6px 12px;
-          border-radius: 8px;
+          padding: 8px 16px;
+          border-radius: 10px;
           font-weight: 800;
-          font-size: 0.8rem;
-          min-height: 44px;
+          font-size: 0.9rem;
+          min-height: 48px;
+          color: var(--oddshoe-navy-900);
         }
 
         .navigation-actions-row {
           display: flex;
-          gap: 12px;
+          gap: 14px;
         }
 
         .step-nav-arrow-btn {
@@ -2632,15 +2487,21 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 6px;
-          padding: 12px;
-          border-radius: 10px;
-          background: rgba(255,255,255,0.85);
+          gap: 8px;
+          padding: 14px 20px;
+          border-radius: 12px;
+          background: rgba(255,255,255,0.9);
           border: 1px solid var(--glass-border-standard);
           color: var(--oddshoe-navy-900);
           font-weight: 800;
-          font-size: 0.85rem;
-          min-height: 44px;
+          font-size: 0.95rem;
+          min-height: 50px;
+          transition: all var(--transition-fast);
+        }
+
+        .step-nav-arrow-btn:hover:not(:disabled) {
+          background: #FFF;
+          transform: translateY(-1px);
         }
 
         .step-nav-arrow-btn:disabled {
@@ -2659,21 +2520,22 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 8px;
-          padding: 12px;
-          border-radius: 10px;
+          gap: 10px;
+          padding: 14px 24px;
+          border-radius: 12px;
           background: var(--oddshoe-amber);
           color: var(--oddshoe-navy-900);
           font-weight: 800;
-          font-size: 0.9rem;
-          box-shadow: 0 4px 14px rgba(245, 166, 59, 0.35);
+          font-size: 1.05rem;
+          box-shadow: 0 4px 16px rgba(245, 166, 59, 0.4);
           transition: all var(--transition-fast);
-          min-height: 44px;
+          min-height: 50px;
         }
 
         .add-to-cart-cta-btn:hover {
           background: var(--oddshoe-amber-hover);
           transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(245, 166, 59, 0.5);
         }
 
         /* Certificate Modal */
@@ -2683,8 +2545,8 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           left: 0;
           width: 100vw;
           height: 100vh;
-          background: rgba(11, 30, 45, 0.6);
-          backdrop-filter: blur(8px);
+          background: rgba(11, 30, 45, 0.65);
+          backdrop-filter: blur(10px);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -2694,21 +2556,21 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
 
         .certificate-card {
           width: 100%;
-          max-width: 520px;
+          max-width: 540px;
           background: #FAF9F6;
           border: 8px double #C5A059;
-          border-radius: 4px;
-          padding: 32px;
+          border-radius: 6px;
+          padding: 36px;
           position: relative;
           color: #1A1A1A;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+          box-shadow: 0 24px 48px rgba(0,0,0,0.35);
         }
 
         .close-cert-btn {
           position: absolute;
-          top: 16px;
-          right: 16px;
-          color: #888;
+          top: 18px;
+          right: 18px;
+          color: #666;
         }
 
         .cert-header {
@@ -2717,7 +2579,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           align-items: center;
           text-align: center;
           border-bottom: 2px solid #C5A059;
-          padding-bottom: 16px;
+          padding-bottom: 18px;
           margin-bottom: 20px;
         }
 
@@ -2728,7 +2590,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
 
         .cert-header h3 {
           font-family: var(--font-display);
-          font-size: 1.4rem;
+          font-size: 1.5rem;
           font-weight: 800;
           text-transform: uppercase;
           letter-spacing: 0.05em;
@@ -2736,14 +2598,14 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         }
 
         .cert-header p {
-          font-size: 0.65rem;
+          font-size: 0.75rem;
           font-weight: 800;
           letter-spacing: 0.1em;
           margin-top: 4px;
         }
 
         .cert-body {
-          font-size: 0.85rem;
+          font-size: 0.9rem;
           line-height: 1.5;
           text-align: center;
         }
@@ -2757,8 +2619,8 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         .cert-specs-table {
           background: rgba(197, 160, 89, 0.08);
           border: 1px solid rgba(197, 160, 89, 0.25);
-          border-radius: 6px;
-          padding: 16px;
+          border-radius: 8px;
+          padding: 18px;
           margin-bottom: 24px;
           text-align: left;
         }
@@ -2766,7 +2628,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         .spec-row {
           display: flex;
           justify-content: space-between;
-          padding: 6px 0;
+          padding: 8px 0;
           border-bottom: 1px solid rgba(197, 160, 89, 0.15);
         }
 
@@ -2776,20 +2638,20 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
 
         .spec-label {
           font-weight: 700;
-          font-size: 0.76rem;
-          color: #666;
+          font-size: 0.85rem;
+          color: #555;
         }
 
         .spec-val {
           font-weight: 800;
-          font-size: 0.78rem;
+          font-size: 0.88rem;
           color: #1A1A1A;
         }
 
         .serial-txt {
           font-family: monospace;
           color: #C5A059;
-          font-size: 0.95rem;
+          font-size: 1rem;
         }
 
         .cert-signature-section {
@@ -2802,23 +2664,24 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         .sig-block {
           display: flex;
           flex-direction: column;
-          width: 42%;
+          align-items: center;
         }
 
         .sig-line {
-          font-family: 'Syne', cursive;
-          font-size: 0.85rem;
-          font-weight: 700;
+          font-family: 'Syne', cursive, sans-serif;
+          font-size: 1rem;
+          font-weight: 800;
           border-bottom: 1px solid #1A1A1A;
           padding-bottom: 4px;
-          height: 24px;
+          min-width: 130px;
+          text-align: center;
         }
 
         .sig-block label {
-          font-size: 0.62rem;
-          font-weight: 700;
-          color: #666;
+          font-size: 0.7rem;
+          text-transform: uppercase;
           margin-top: 4px;
+          color: #777;
         }
 
         .cert-footer {
@@ -2831,49 +2694,30 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           display: flex;
           align-items: center;
           gap: 8px;
+          padding: 10px 20px;
           background: #C5A059;
           color: #FFF;
-          padding: 10px 20px;
-          border-radius: 4px;
+          border-radius: 8px;
           font-weight: 800;
           font-size: 0.85rem;
         }
 
-        /* Floating Toast Alert */
         .floating-toast-alert {
           position: fixed;
           bottom: 24px;
-          right: 24px;
+          left: 50%;
+          transform: translateX(-50%);
           background: var(--oddshoe-navy-900);
           color: #FFF;
-          border-radius: 12px;
-          padding: 12px 20px;
-          box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+          padding: 12px 24px;
+          border-radius: 30px;
+          font-weight: 800;
+          font-size: 0.9rem;
           display: flex;
           align-items: center;
           gap: 10px;
-          font-size: 0.85rem;
-          font-weight: 700;
+          box-shadow: var(--shadow-lg);
           z-index: 10001;
-        }
-
-        /* CSS animations */
-        .animate-fade {
-          animation: fadeSlideIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        .animate-slide {
-          animation: slideIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-
-        @keyframes fadeSlideIn {
-          from { opacity: 0; transform: translateY(8px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes slideIn {
-          from { transform: translateY(16px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
         }
       `}</style>
     </div>
