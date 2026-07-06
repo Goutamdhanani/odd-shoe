@@ -116,6 +116,22 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
   ];
   const [activeStep, setActiveStep] = useState(0);
 
+  // Active Preset track
+  const [activePreset, setActivePreset] = useState<string | null>(null);
+
+  // Bottom Sheet State for Mobile
+  const [sheetState, setSheetState] = useState<'minimized' | 'half' | 'expanded'>('half');
+  const [dragY, setDragY] = useState<number | null>(null);
+
+  // Refs for auto-centering horizontal scrolling lists
+  const stepRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const presetRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const zoneRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  // Refs for bottom sheet dragging
+  const startDragY = useRef(0);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
   // Editable design title
   const [designTitle, setDesignTitle] = useState('My Custom One-of-One Sneaker');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -180,6 +196,121 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
   const [certificateSerial, setCertificateSerial] = useState('');
   const [size, setSize] = useState<number>(9);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // --- BOTTOM SHEET DRAG HANDLERS & AUTO-SCROLL EFFECTS ---
+
+  const handleDragStart = (clientY: number) => {
+    if (window.innerWidth > 768) return;
+    startDragY.current = clientY;
+    setDragY(0);
+  };
+
+  const handleDragMove = (clientY: number) => {
+    if (dragY === null) return;
+    const delta = clientY - startDragY.current;
+    setDragY(delta);
+  };
+
+  const handleDragEnd = () => {
+    if (dragY === null) return;
+    const delta = dragY;
+    setDragY(null);
+
+    const vh = window.innerHeight;
+    const expandedY = vh * 0.15;
+    const halfY = vh * 0.52;
+    const minimizedY = vh - 120;
+
+    let startY = halfY;
+    if (sheetState === 'expanded') startY = expandedY;
+    if (sheetState === 'minimized') startY = minimizedY;
+
+    const currentY = startY + delta;
+
+    const distToExpanded = Math.abs(currentY - expandedY);
+    const distToHalf = Math.abs(currentY - halfY);
+    const distToMinimized = Math.abs(currentY - minimizedY);
+
+    const minDist = Math.min(distToExpanded, distToHalf, distToMinimized);
+
+    if (minDist === distToExpanded) {
+      setSheetState('expanded');
+    } else if (minDist === distToHalf) {
+      setSheetState('half');
+    } else {
+      setSheetState('minimized');
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    handleDragStart(e.touches[0].clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    handleDragMove(e.touches[0].clientY);
+  };
+
+  const handleTouchEnd = () => {
+    handleDragEnd();
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('input, select, button, textarea')) return;
+    handleDragStart(e.clientY);
+    document.addEventListener('mousemove', handleMouseMoveGlobal);
+    document.addEventListener('mouseup', handleMouseUpGlobal);
+  };
+
+  const handleMouseMoveGlobal = (e: MouseEvent) => {
+    handleDragMove(e.clientY);
+  };
+
+  const handleMouseUpGlobal = () => {
+    handleDragEnd();
+    document.removeEventListener('mousemove', handleMouseMoveGlobal);
+    document.removeEventListener('mouseup', handleMouseUpGlobal);
+  };
+
+  // Scroll active elements into view
+  useEffect(() => {
+    const activeBtn = stepRefs.current[activeStep];
+    if (activeBtn) {
+      activeBtn.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }
+    // Auto restore bottom sheet if minimized when navigating
+    if (sheetState === 'minimized') {
+      setSheetState('half');
+    }
+  }, [activeStep]);
+
+  useEffect(() => {
+    if (activePreset) {
+      const activePill = presetRefs.current[activePreset];
+      if (activePill) {
+        activePill.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'center'
+        });
+      }
+    }
+  }, [activePreset]);
+
+  useEffect(() => {
+    const activeZone = zoneRefs.current[selectedPart];
+    if (activeZone) {
+      activeZone.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'center'
+      });
+    }
+  }, [selectedPart]);
 
   // Price calculations
   const calculatePricing = () => {
@@ -337,6 +468,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
     setMaterial(preset.material);
     setLogo(preset.logo);
     setAccessories(preset.accessories);
+    setActivePreset(preset.name);
     triggerToast(`Applied "${preset.name}" design preset!`);
     confetti({ particleCount: 60, spread: 40, origin: { y: 0.85 } });
   };
@@ -456,6 +588,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
             type: 'image',
             value: event.target!.result as string
           }));
+          setActivePreset(null);
           triggerToast('Logo loaded! Drag it on the side panel to reposition.');
         }
       };
@@ -560,7 +693,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
       </header>
 
       {/* Main Dual Pane Layout */}
-      <main className="customizer-workspace">
+      <main className={`customizer-workspace sheet-${sheetState}`}>
         
         {/* LEFT PANE: Premium Preview Studio */}
         <section className="preview-stage-pane">
@@ -595,7 +728,8 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
               {PRESETS.map((pr) => (
                 <button 
                   key={pr.name}
-                  className="preset-pill-btn"
+                  ref={(el) => { presetRefs.current[pr.name] = el; }}
+                  className={`preset-pill-btn ${activePreset === pr.name ? 'active' : ''}`}
                   onClick={() => applyPreset(pr)}
                 >
                   <span className="preset-dot" style={{ background: pr.colors.upper }} />
@@ -607,12 +741,28 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         </section>
 
         {/* RIGHT PANE: Steps & Configurator Panel */}
-        <section className="configurator-controls-pane">
+        <section 
+          ref={sheetRef}
+          className={`configurator-controls-pane sheet-${sheetState} ${dragY !== null ? 'is-dragging' : ''}`}
+          style={dragY !== null ? { transform: `translateY(${dragY}px)` } : undefined}
+        >
+          {/* Bottom Sheet Drag Handle (Mobile Only) */}
+          <div 
+            className="bottom-sheet-handle-bar"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+            onMouseDown={handleMouseDown}
+          >
+            <div className="drag-handle-indicator" />
+          </div>
+
           {/* Navigation Steps Indicator */}
           <nav className="steps-progress-indicator">
             {steps.map((st, idx) => (
               <button
                 key={st}
+                ref={(el) => { stepRefs.current[idx] = el; }}
                 className={`step-nav-btn ${idx === activeStep ? 'active' : ''} ${idx < activeStep ? 'completed' : ''}`}
                 onClick={() => setActiveStep(idx)}
               >
@@ -636,6 +786,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                       className={`base-item-card ${baseModel === base.name ? 'selected' : ''}`}
                       onClick={() => {
                         setBaseModel(base.name);
+                        setActivePreset(null);
                         triggerToast(`Switched to ${base.name} Base`);
                       }}
                     >
@@ -663,6 +814,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                   {Object.keys(colors).map((part) => (
                     <button
                       key={part}
+                      ref={(el) => { zoneRefs.current[part] = el; }}
                       className={`zone-select-btn ${selectedPart === part ? 'active' : ''}`}
                       onClick={() => setSelectedPart(part)}
                     >
@@ -694,6 +846,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                               heel: palette[2],
                               stitching: palette[2]
                             }));
+                            setActivePreset(null);
                             triggerToast('Applied smart matching color combination!');
                           }}
                         >
@@ -721,7 +874,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                           key={c} 
                           className={`color-bubble ${colors[selectedPart] === c ? 'selected' : ''}`}
                           style={{ backgroundColor: c }}
-                          onClick={() => setColors(prev => ({ ...prev, [selectedPart]: c }))}
+                          onClick={() => {
+                            setColors(prev => ({ ...prev, [selectedPart]: c }));
+                            setActivePreset(null);
+                          }}
                         />
                       ))}
                     </div>
@@ -736,7 +892,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                           key={c} 
                           className={`color-bubble ${colors[selectedPart] === c ? 'selected' : ''}`}
                           style={{ backgroundColor: c }}
-                          onClick={() => setColors(prev => ({ ...prev, [selectedPart]: c }))}
+                          onClick={() => {
+                            setColors(prev => ({ ...prev, [selectedPart]: c }));
+                            setActivePreset(null);
+                          }}
                         />
                       ))}
                     </div>
@@ -751,7 +910,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                           key={c} 
                           className={`color-bubble ${colors[selectedPart] === c ? 'selected' : ''}`}
                           style={{ backgroundColor: c }}
-                          onClick={() => setColors(prev => ({ ...prev, [selectedPart]: c }))}
+                          onClick={() => {
+                            setColors(prev => ({ ...prev, [selectedPart]: c }));
+                            setActivePreset(null);
+                          }}
                         />
                       ))}
                     </div>
@@ -766,7 +928,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                           key={c} 
                           className={`color-bubble ${colors[selectedPart] === c ? 'selected' : ''}`}
                           style={{ backgroundColor: c }}
-                          onClick={() => setColors(prev => ({ ...prev, [selectedPart]: c }))}
+                          onClick={() => {
+                            setColors(prev => ({ ...prev, [selectedPart]: c }));
+                            setActivePreset(null);
+                          }}
                         />
                       ))}
                     </div>
@@ -780,7 +945,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                         <input
                           type="text"
                           value={colors[selectedPart]}
-                          onChange={(e) => setColors(prev => ({ ...prev, [selectedPart]: e.target.value }))}
+                          onChange={(e) => {
+                            setColors(prev => ({ ...prev, [selectedPart]: e.target.value }));
+                            setActivePreset(null);
+                          }}
                         />
                       </div>
                       <div className="color-input-box">
@@ -788,7 +956,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                         <input
                           type="color"
                           value={colors[selectedPart]}
-                          onChange={(e) => setColors(prev => ({ ...prev, [selectedPart]: e.target.value }))}
+                          onChange={(e) => {
+                            setColors(prev => ({ ...prev, [selectedPart]: e.target.value }));
+                            setActivePreset(null);
+                          }}
                         />
                       </div>
                     </div>
@@ -810,7 +981,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                       <button
                         key={type}
                         className={`toggle-option-btn ${laces.type === type ? 'active' : ''}`}
-                        onClick={() => setLaces(prev => ({ ...prev, type }))}
+                        onClick={() => {
+                          setLaces(prev => ({ ...prev, type }));
+                          setActivePreset(null);
+                        }}
                       >
                         {type.toUpperCase()}
                       </button>
@@ -825,7 +999,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                       <button
                         key={thickness}
                         className={`toggle-option-btn ${laces.thickness === thickness ? 'active' : ''}`}
-                        onClick={() => setLaces(prev => ({ ...prev, thickness }))}
+                        onClick={() => {
+                          setLaces(prev => ({ ...prev, thickness }));
+                          setActivePreset(null);
+                        }}
                       >
                         {thickness.toUpperCase()}
                       </button>
@@ -841,7 +1018,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                         key={c} 
                         className={`color-bubble ${laces.color === c ? 'selected' : ''}`}
                         style={{ backgroundColor: c }}
-                        onClick={() => setLaces(prev => ({ ...prev, color: c }))}
+                        onClick={() => {
+                          setLaces(prev => ({ ...prev, color: c }));
+                          setActivePreset(null);
+                        }}
                       />
                     ))}
                   </div>
@@ -866,7 +1046,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                     <div
                       key={s.id}
                       className={`sole-select-row ${soleType === s.id ? 'selected' : ''}`}
-                      onClick={() => setSoleType(s.id)}
+                      onClick={() => {
+                        setSoleType(s.id);
+                        setActivePreset(null);
+                      }}
                     >
                       <div className="row-info">
                         <span className="sole-name">{s.name}</span>
@@ -897,7 +1080,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                     <div
                       key={m.id}
                       className={`material-card-row ${material === m.id ? 'selected' : ''}`}
-                      onClick={() => setMaterial(m.id)}
+                      onClick={() => {
+                        setMaterial(m.id);
+                        setActivePreset(null);
+                      }}
                     >
                       <div className="mat-details">
                         <span className="mat-name">{m.name}</span>
@@ -922,7 +1108,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                       <button
                         key={type}
                         className={`toggle-option-btn ${logo.type === type ? 'active' : ''}`}
-                        onClick={() => setLogo(prev => ({ ...prev, type }))}
+                        onClick={() => {
+                          setLogo(prev => ({ ...prev, type }));
+                          setActivePreset(null);
+                        }}
                       >
                         {type.toUpperCase()}
                       </button>
@@ -938,7 +1127,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                       className="text-signature-input"
                       maxLength={5}
                       value={logo.value}
-                      onChange={(e) => setLogo(prev => ({ ...prev, value: e.target.value.toUpperCase() }))}
+                      onChange={(e) => {
+                        setLogo(prev => ({ ...prev, value: e.target.value.toUpperCase() }));
+                        setActivePreset(null);
+                      }}
                       placeholder="e.g. ODD"
                     />
                     <p className="field-hint">Tip: Drag the logo directly on the shoe side panel to reposition.</p>
@@ -974,7 +1166,10 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
                       max="2.0"
                       step="0.05"
                       value={logo.scale}
-                      onChange={(e) => setLogo(prev => ({ ...prev, scale: parseFloat(e.target.value) }))}
+                      onChange={(e) => {
+                        setLogo(prev => ({ ...prev, scale: parseFloat(e.target.value) }));
+                        setActivePreset(null);
+                      }}
                       className="slider-input"
                     />
                   </div>
@@ -985,56 +1180,70 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
             {/* STEP 7: ACCESSORIES & DETAILS */}
             {activeStep === 6 && (
               <div className="step-content animate-fade">
-                <h3 className="control-section-title">Hardware & Fine Details</h3>
-                
-                <div className="accessories-checkboxes-list">
-                  {[
-                    { id: 'laceTags', name: 'Metal Lace Tags (Deubré)', cost: '+ Rs. 500', desc: 'Glossy engraved metal tags at base of laces.' },
-                    { id: 'goldEyelets', name: 'Gold Hardware Eyelets', cost: '+ Rs. 1,000', desc: 'Anodized brass gold loops replacing regular lace eyelets.' },
-                    { id: 'reflectiveStrips', name: '3M Reflective Striping', cost: '+ Rs. 800', desc: 'Reflective stripes along heel counter for night presence.' },
-                    { id: 'glowOutsole', name: 'Glow-in-the-Dark Outsole', cost: '+ Rs. 1,500', desc: 'Luminescent rubber compound sole that glows green.' },
-                    { id: 'carbonHeel', name: 'Carbon Fiber Heel Plate', cost: '+ Rs. 2,000', desc: 'High-rigidity lightweight protective carbon plate at heel.' }
-                  ].map((acc) => (
-                    <div
-                      key={acc.id}
-                      className={`acc-checkbox-row ${accessories[acc.id as keyof typeof accessories] ? 'selected' : ''}`}
-                      onClick={() => setAccessories(prev => ({
-                        ...prev,
-                        [acc.id]: !prev[acc.id as keyof typeof accessories]
-                      }))}
-                    >
-                      <div className="check-box-outer">
-                        <div className="check-box-dot" />
-                      </div>
-                      <div className="acc-info">
-                        <span className="acc-title">{acc.name}</span>
-                        <p className="acc-desc">{acc.desc}</p>
-                      </div>
-                      <span className="acc-cost">{acc.cost}</span>
+                <div className="accessory-group-container">
+                  <div className="accessory-section">
+                    <h4 className="accessory-section-title">Hardware Options</h4>
+                    <div className="accessories-checkboxes-list">
+                      {[
+                        { id: 'laceTags', name: 'Metal Lace Tags (Deubré)', cost: '+ Rs. 500', desc: 'Glossy engraved metal tags at base of laces.' },
+                        { id: 'goldEyelets', name: 'Gold Hardware Eyelets', cost: '+ Rs. 1,000', desc: 'Anodized brass gold loops replacing regular lace eyelets.' },
+                        { id: 'reflectiveStrips', name: '3M Reflective Striping', cost: '+ Rs. 800', desc: 'Reflective stripes along heel counter for night presence.' },
+                        { id: 'glowOutsole', name: 'Glow-in-the-Dark Outsole', cost: '+ Rs. 1,500', desc: 'Luminescent rubber compound sole that glows green.' },
+                        { id: 'carbonHeel', name: 'Carbon Fiber Heel Plate', cost: '+ Rs. 2,000', desc: 'High-rigidity lightweight protective carbon plate at heel.' }
+                      ].map((acc) => (
+                        <div
+                          key={acc.id}
+                          className={`acc-checkbox-row ${accessories[acc.id as keyof typeof accessories] ? 'selected' : ''}`}
+                          onClick={() => {
+                            setAccessories(prev => ({
+                              ...prev,
+                              [acc.id]: !prev[acc.id as keyof typeof accessories]
+                            }));
+                            setActivePreset(null);
+                          }}
+                        >
+                          <div className="check-box-outer">
+                            <div className="check-box-dot" />
+                          </div>
+                          <div className="acc-info">
+                            <span className="acc-title">{acc.name}</span>
+                            <p className="acc-desc">{acc.desc}</p>
+                          </div>
+                          <span className="acc-cost">{acc.cost}</span>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  </div>
 
-                  {/* Text labels input */}
-                  <div className="acc-text-inputs">
-                    <div className="input-group-acc">
-                      <label>Personalized Tongue Label (Max 8 Char)</label>
-                      <input 
-                        type="text" 
-                        maxLength={8}
-                        value={accessories.tongueLabel} 
-                        onChange={(e) => setAccessories(prev => ({ ...prev, tongueLabel: e.target.value }))}
-                        placeholder="e.g. BOSS"
-                      />
-                    </div>
-                    <div className="input-group-acc">
-                      <label>Insole Bed Print Text (Max 15 Char)</label>
-                      <input 
-                        type="text" 
-                        maxLength={15}
-                        value={accessories.insoleText} 
-                        onChange={(e) => setAccessories(prev => ({ ...prev, insoleText: e.target.value }))}
-                        placeholder="e.g. MADE BY ME"
-                      />
+                  <div className="accessory-section">
+                    <h4 className="accessory-section-title">Text Personalization</h4>
+                    <div className="acc-text-inputs">
+                      <div className="input-group-acc">
+                        <label>Personalized Tongue Label (Max 8 Char)</label>
+                        <input 
+                          type="text" 
+                          maxLength={8}
+                          value={accessories.tongueLabel} 
+                          onChange={(e) => {
+                            setAccessories(prev => ({ ...prev, tongueLabel: e.target.value }));
+                            setActivePreset(null);
+                          }}
+                          placeholder="e.g. BOSS"
+                        />
+                      </div>
+                      <div className="input-group-acc">
+                        <label>Insole Bed Print Text (Max 15 Char)</label>
+                        <input 
+                          type="text" 
+                          maxLength={15}
+                          value={accessories.insoleText} 
+                          onChange={(e) => {
+                            setAccessories(prev => ({ ...prev, insoleText: e.target.value }));
+                            setActivePreset(null);
+                          }}
+                          placeholder="e.g. MADE BY ME"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1190,18 +1399,55 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           z-index: 10;
         }
 
+        @media (max-width: 768px) {
+          .customizer-nav-header {
+            display: grid;
+            grid-template-areas: 
+              "exit actions"
+              "title title";
+            grid-template-columns: auto 1fr;
+            gap: 16px;
+            padding: calc(16px + env(safe-area-inset-top, 0px)) 16px 16px;
+            align-items: center;
+          }
+          .back-to-store-btn {
+            grid-area: exit;
+            justify-self: start;
+          }
+          .header-actions {
+            grid-area: actions;
+            justify-self: end;
+          }
+          .design-title-block {
+            grid-area: title;
+            justify-self: center;
+            text-align: center;
+            gap: 8px !important;
+          }
+          .title-display {
+            font-size: 1rem !important;
+            text-align: center;
+            justify-content: center;
+          }
+          .title-edit-input {
+            font-size: 1rem !important;
+            max-width: 240px;
+          }
+        }
+
         .back-to-store-btn {
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
           font-weight: 800;
           color: var(--oddshoe-navy-900);
           font-size: 0.95rem;
-          padding: 8px 16px;
+          padding: 12px 16px;
           border-radius: 8px;
           background: rgba(255,255,255,0.3);
           border: 1px solid var(--glass-border-standard);
           transition: all var(--transition-fast);
+          min-height: 44px;
         }
 
         .back-to-store-btn:hover {
@@ -1213,7 +1459,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 4px;
+          gap: 8px;
         }
 
         .title-display {
@@ -1250,7 +1496,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           color: #2E7D32;
           display: flex;
           align-items: center;
-          gap: 4px;
+          gap: 8px;
         }
 
         .header-actions {
@@ -1261,10 +1507,13 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         .icon-header-btn {
           display: flex;
           align-items: center;
-          gap: 6px;
+          justify-content: center;
+          gap: 8px;
           background: rgba(255,255,255,0.3);
           border: 1px solid var(--glass-border-standard);
-          padding: 8px 14px;
+          padding: 12px;
+          min-height: 44px;
+          min-width: 44px;
           border-radius: 8px;
           font-weight: 700;
           color: var(--oddshoe-navy-900);
@@ -1286,11 +1535,12 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           overflow: hidden;
         }
 
-        @media (max-width: 1024px) {
+        @media (max-width: 768px) {
           .customizer-workspace {
-            grid-template-columns: 1fr;
-            grid-template-rows: 1.1fr 1fr;
-            overflow-y: auto;
+            display: block;
+            position: relative;
+            height: calc(100vh - 120px - env(safe-area-inset-top, 0px));
+            overflow: hidden;
           }
         }
 
@@ -1303,6 +1553,65 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           padding: 24px 32px 16px;
           border-right: 1px solid var(--glass-border-standard);
           overflow: hidden;
+        }
+
+        @media (max-width: 768px) {
+          .preview-stage-pane {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            border-right: none;
+            padding: 16px;
+            z-index: 5;
+            display: flex;
+            flex-direction: column;
+            transition: height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.35s ease;
+          }
+          /* Dynamic height based on bottom sheet state */
+          .customizer-workspace.sheet-minimized .preview-stage-pane {
+            height: calc(100vh - 120px - 120px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+          }
+          .customizer-workspace.sheet-half .preview-stage-pane {
+            height: calc(52vh - 120px - env(safe-area-inset-top, 0px));
+          }
+          .customizer-workspace.sheet-expanded .preview-stage-pane {
+            height: calc(15vh - 120px - env(safe-area-inset-top, 0px));
+            opacity: 0.15;
+            pointer-events: none;
+          }
+
+          /* Flex reordering for presets at the top on mobile */
+          .stage-top-chips {
+            order: 1;
+            margin-bottom: 8px;
+            justify-content: center;
+            gap: 16px;
+            width: 100%;
+          }
+          .quick-presets-strip {
+            order: 2;
+            margin-top: 0;
+            margin-bottom: 8px;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 8px;
+          }
+          .strip-title {
+            text-align: center;
+          }
+          .preview-stage-pane > div:not(.stage-top-chips):not(.quick-presets-strip) {
+            order: 3;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 0;
+          }
+
+          .customizer-workspace.sheet-half .interactive-drag-container {
+            transform: translateY(-24px);
+          }
         }
 
         .stage-top-chips {
@@ -1321,7 +1630,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           letter-spacing: 0.08em;
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
         }
 
         .delivery-est {
@@ -1334,7 +1643,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           color: var(--oddshoe-navy-900);
           display: flex;
           align-items: center;
-          gap: 6px;
+          gap: 8px;
         }
 
         .interactive-drag-container {
@@ -1346,6 +1655,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           position: relative;
           cursor: grab;
           z-index: 2;
+          transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s ease;
         }
 
         .interactive-drag-container:active {
@@ -1392,13 +1702,14 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         }
 
         .camera-angle-tab {
-          padding: 6px 14px;
+          padding: 8px 16px;
           border-radius: 12px;
           font-weight: 800;
           font-size: 0.72rem;
           color: var(--oddshoe-navy-900);
           background: transparent;
           transition: all var(--transition-fast);
+          min-height: 44px;
         }
 
         .camera-angle-tab.active {
@@ -1413,8 +1724,8 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         }
 
         .zoom-btn {
-          width: 28px;
-          height: 28px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
           background: rgba(255,255,255,0.5);
           display: flex;
@@ -1433,7 +1744,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         .quick-presets-strip {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 16px;
           margin-top: 16px;
           z-index: 3;
         }
@@ -1448,17 +1759,17 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
 
         .presets-list {
           display: flex;
-          gap: 8px;
+          gap: 16px;
           overflow-x: auto;
-          padding: 4px 0;
+          padding: 8px 0;
           scrollbar-width: none;
         }
 
         .preset-pill-btn {
           display: flex;
           align-items: center;
-          gap: 6px;
-          padding: 6px 14px;
+          gap: 8px;
+          padding: 8px 16px;
           border-radius: 20px;
           background: rgba(255,255,255,0.45);
           border: 1px solid var(--glass-border-standard);
@@ -1466,19 +1777,27 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           font-weight: 700;
           color: var(--oddshoe-navy-900);
           white-space: nowrap;
+          transition: all var(--transition-fast);
+          min-height: 44px;
         }
 
         .preset-pill-btn:hover {
           background: rgba(255,255,255,0.7);
         }
 
+        .preset-pill-btn.active {
+          background: var(--oddshoe-navy-900);
+          color: #FFF;
+          border-color: var(--oddshoe-navy-900);
+        }
+
         .preset-dot {
-          width: 8px;
-          height: 8px;
+          width: 10px;
+          height: 10px;
           border-radius: 50%;
         }
 
-        /* Right side */
+        /* Right side / Bottom Sheet */
         .configurator-controls-pane {
           background: rgba(255, 255, 255, 0.55);
           backdrop-filter: blur(20px);
@@ -1487,6 +1806,69 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           flex-direction: column;
           justify-content: space-between;
           overflow: hidden;
+          z-index: 20;
+        }
+
+        @media (max-width: 768px) {
+          .configurator-controls-pane {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-top: 1px solid var(--glass-border-standard);
+            border-radius: 24px 24px 0 0;
+            box-shadow: 0 -10px 40px rgba(11, 30, 45, 0.12);
+            transition: top 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), height 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: translateY(0);
+          }
+          .configurator-controls-pane.sheet-expanded {
+            top: 15vh;
+            height: 85vh;
+          }
+          .configurator-controls-pane.sheet-half {
+            top: 52vh;
+            height: 48vh;
+          }
+          .configurator-controls-pane.sheet-minimized {
+            top: calc(100vh - 120px - env(safe-area-inset-bottom, 0px));
+            height: calc(120px + env(safe-area-inset-bottom, 0px));
+            border-radius: 24px 24px 0 0;
+          }
+          .configurator-controls-pane.is-dragging {
+            transition: none !important;
+          }
+        }
+
+        .bottom-sheet-handle-bar {
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          .bottom-sheet-handle-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 0;
+            cursor: grab;
+            width: 100%;
+            user-select: none;
+            background: transparent;
+            z-index: 101;
+            min-height: 24px;
+          }
+          .bottom-sheet-handle-bar:active {
+            cursor: grabbing;
+          }
+          .drag-handle-indicator {
+            width: 36px;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--oddshoe-gray-400);
+            opacity: 0.5;
+          }
         }
 
         .steps-progress-indicator {
@@ -1496,17 +1878,41 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           scrollbar-width: none;
         }
 
+        .steps-progress-indicator::-webkit-scrollbar {
+          display: none;
+        }
+
+        @media (max-width: 768px) {
+          .steps-progress-indicator {
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+            padding: 8px 16px;
+            gap: 16px;
+          }
+        }
+
         .step-nav-btn {
           flex: 1;
           display: flex;
           flex-direction: column;
           align-items: center;
           padding: 12px 6px;
-          gap: 4px;
+          gap: 8px;
           border-bottom: 3px solid transparent;
           min-width: 72px;
           opacity: 0.55;
           transition: all var(--transition-fast);
+          min-height: 48px;
+        }
+
+        @media (max-width: 768px) {
+          .step-nav-btn {
+            flex: 0 0 auto !important;
+            scroll-snap-align: center;
+            min-width: max-content !important;
+            padding: 8px 12px !important;
+          }
         }
 
         .step-nav-btn.active {
@@ -1520,12 +1926,12 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         }
 
         .step-num {
-          width: 20px;
-          height: 20px;
+          width: 24px;
+          height: 24px;
           border-radius: 50%;
           background: var(--oddshoe-navy-900);
           color: #FFF;
-          font-size: 0.65rem;
+          font-size: 0.7rem;
           font-weight: 800;
           display: flex;
           align-items: center;
@@ -1533,7 +1939,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         }
 
         .step-label {
-          font-size: 0.62rem;
+          font-size: 0.65rem;
           font-weight: 800;
           text-transform: uppercase;
           letter-spacing: 0.05em;
@@ -1545,6 +1951,20 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           flex: 1;
           padding: 24px 32px;
           overflow-y: auto;
+        }
+
+        @media (max-width: 768px) {
+          .step-detail-card {
+            padding: 16px 16px 32px;
+          }
+          .configurator-controls-pane.sheet-minimized .step-detail-card,
+          .configurator-controls-pane.sheet-minimized .steps-progress-indicator {
+            display: none;
+          }
+          .configurator-controls-pane.sheet-minimized .configurator-footer-summary {
+            border-top: none;
+            padding: 8px 16px 16px;
+          }
         }
 
         .control-section-title {
@@ -1627,6 +2047,29 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           margin-bottom: 24px;
         }
 
+        @media (max-width: 768px) {
+          .zones-grid {
+            display: flex;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            padding: 4px 16px;
+            gap: 12px;
+            margin-bottom: 16px;
+          }
+          .zones-grid::-webkit-scrollbar {
+            display: none;
+          }
+          .zone-select-btn {
+            flex: 0 0 auto;
+            scroll-snap-align: center;
+            min-width: max-content;
+            min-height: 44px;
+            padding: 8px 16px;
+          }
+        }
+
         .zone-select-btn {
           display: flex;
           align-items: center;
@@ -1639,6 +2082,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           font-size: 0.74rem;
           font-weight: 700;
           color: var(--oddshoe-navy-900);
+          min-height: 44px;
         }
 
         .zone-select-btn.active {
@@ -1734,13 +2178,23 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         }
 
         .color-bubble {
-          width: 24px;
-          height: 24px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
           border: 1.5px solid #FFF;
           box-shadow: 0 2px 4px rgba(0,0,0,0.1);
           cursor: pointer;
           transition: all 0.15s ease;
+          position: relative;
+        }
+
+        .color-bubble::after {
+          content: '';
+          position: absolute;
+          top: -6px;
+          left: -6px;
+          right: -6px;
+          bottom: -6px;
         }
 
         .color-bubble.selected {
@@ -1751,6 +2205,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         .custom-color-inputs .inputs-row {
           display: flex;
           gap: 16px;
+          flex-wrap: wrap;
         }
 
         .color-input-box {
@@ -1773,13 +2228,14 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           font-size: 0.8rem;
           font-weight: 700;
           width: 90px;
+          min-height: 44px;
         }
 
         .color-input-box input[type="color"] {
           border: none;
           background: transparent;
-          width: 38px;
-          height: 28px;
+          width: 44px;
+          height: 44px;
           cursor: pointer;
         }
 
@@ -1811,6 +2267,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           font-weight: 800;
           color: var(--oddshoe-navy-900);
           transition: all var(--transition-fast);
+          min-height: 44px;
         }
 
         .toggle-option-btn.active {
@@ -1835,6 +2292,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           padding: 12px 18px;
           cursor: pointer;
           transition: all var(--transition-fast);
+          min-height: 48px;
         }
 
         .sole-select-row.selected {
@@ -1890,6 +2348,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           border-radius: 12px;
           cursor: pointer;
           transition: all var(--transition-fast);
+          min-height: 48px;
         }
 
         .material-card-row.selected {
@@ -1941,6 +2400,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           font-weight: 800;
           color: var(--oddshoe-navy-900);
           outline: none;
+          min-height: 44px;
         }
 
         .text-signature-input:focus {
@@ -1994,9 +2454,33 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         .slider-input {
           width: 100%;
           accent-color: var(--oddshoe-navy-900);
+          min-height: 36px;
         }
 
-        /* Accessories */
+        /* Accessories Grouping & Padding styling */
+        .accessory-group-container {
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        }
+
+        .accessory-section {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+
+        .accessory-section-title {
+          font-family: var(--font-display);
+          font-weight: 800;
+          font-size: 0.9rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: var(--oddshoe-navy-900);
+          border-bottom: 1px solid rgba(0,0,0,0.08);
+          padding-bottom: 8px;
+        }
+
         .accessories-checkboxes-list {
           display: flex;
           flex-direction: column;
@@ -2013,6 +2497,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           border-radius: 12px;
           cursor: pointer;
           transition: all var(--transition-fast);
+          min-height: 48px;
         }
 
         .acc-checkbox-row.selected {
@@ -2058,7 +2543,6 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
         }
 
         .acc-text-inputs {
-          margin-top: 16px;
           display: flex;
           flex-direction: column;
           gap: 12px;
@@ -2084,13 +2568,14 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           font-size: 0.8rem;
           font-weight: 700;
           outline: none;
+          min-height: 44px;
         }
 
         /* Footer */
         .configurator-footer-summary {
           border-top: 1px solid var(--glass-border-standard);
           background: rgba(255, 255, 255, 0.7);
-          padding: 16px 32px;
+          padding: 16px 32px calc(16px + env(safe-area-inset-bottom, 0px));
         }
 
         .pricing-bar {
@@ -2134,6 +2619,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           border-radius: 8px;
           font-weight: 800;
           font-size: 0.8rem;
+          min-height: 44px;
         }
 
         .navigation-actions-row {
@@ -2154,6 +2640,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           color: var(--oddshoe-navy-900);
           font-weight: 800;
           font-size: 0.85rem;
+          min-height: 44px;
         }
 
         .step-nav-arrow-btn:disabled {
@@ -2181,6 +2668,7 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
           font-size: 0.9rem;
           box-shadow: 0 4px 14px rgba(245, 166, 59, 0.35);
           transition: all var(--transition-fast);
+          min-height: 44px;
         }
 
         .add-to-cart-cta-btn:hover {
@@ -2371,20 +2859,20 @@ export const Customizer: React.FC<CustomizerProps> = ({ onClose, onAddToCart }) 
 
         /* CSS animations */
         .animate-fade {
-          animation: fadeIn 0.4s ease-out;
+          animation: fadeSlideIn 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         .animate-slide {
-          animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+          animation: slideIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
+        @keyframes fadeSlideIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
         }
 
         @keyframes slideIn {
-          from { transform: translateY(12px); opacity: 0; }
+          from { transform: translateY(16px); opacity: 0; }
           to { transform: translateY(0); opacity: 1; }
         }
       `}</style>

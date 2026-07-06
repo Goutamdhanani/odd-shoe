@@ -174,7 +174,8 @@ export const ShoeSVG: React.FC<ShoeSVGProps> = ({
           transform: baseTransform,
           transition: isDraggingLogo ? 'none' : 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
           transformStyle: 'preserve-3d',
-          overflow: 'visible'
+          overflow: 'visible',
+          transformOrigin: '50% 50%'
         }}
       >
         <defs>
