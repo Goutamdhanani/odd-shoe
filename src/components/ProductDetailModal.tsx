@@ -423,6 +423,32 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           font-weight: 600;
           color: rgba(11, 30, 45, 0.7);
         }
+
+        @media (max-width: 480px) {
+          .oddshoe-modal-backdrop {
+            padding: 10px;
+          }
+          .modal-content-card {
+            padding: 18px;
+            border-radius: 20px;
+          }
+          .modal-product-title {
+            font-size: 1.5rem;
+          }
+          .modal-price {
+            font-size: 1.3rem;
+          }
+          .size-btn {
+            width: 38px;
+            height: 38px;
+            font-size: 0.8rem;
+          }
+          .modal-guarantees {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 10px;
+          }
+        }
       `}</style>
     </div>
   );

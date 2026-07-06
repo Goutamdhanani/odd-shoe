@@ -397,6 +397,26 @@ export const Hero: React.FC<HeroProps> = ({
             width: 420px;
           }
         }
+
+        @media (max-width: 768px) {
+          .hero-typography-backdrop .display-hero-text {
+            font-size: clamp(3rem, 15vw, 6rem);
+          }
+          .hero-content-left {
+            margin-top: 260px;
+            padding: 0 16px;
+          }
+          .hero-tagline {
+            font-size: 1.8rem;
+          }
+          .hero-description {
+            font-size: 0.85rem;
+          }
+          .hero-shoe-stage {
+            width: 300px;
+            top: 22%;
+          }
+        }
       `}</style>
     </section>
   );

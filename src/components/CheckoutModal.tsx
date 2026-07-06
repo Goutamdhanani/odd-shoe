@@ -451,6 +451,26 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           font-weight: 800;
           font-size: 0.95rem;
         }
+
+        @media (max-width: 480px) {
+          .checkout-backdrop {
+            padding: 10px;
+          }
+          .checkout-card {
+            padding: 20px;
+            border-radius: 18px;
+          }
+          .checkout-grid {
+            gap: 20px;
+          }
+          .payment-options {
+            gap: 6px;
+          }
+          .pay-option {
+            padding: 8px 12px;
+            font-size: 0.8rem;
+          }
+        }
       `}</style>
     </div>
   );
